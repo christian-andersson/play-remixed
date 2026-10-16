@@ -72,6 +72,11 @@ Edit `template.html`, not `index.html`, which `build.py` overwrites.
 | `template.html` | Source of the page, with placeholders for the song list and build date |
 | `build.py` | Reads the catalogue and builds `index.html` |
 
+## License
+
+The code is released under the [MIT License](LICENSE). The licence does not cover the music, the song
+titles or other catalogue data; those belong to their creators and to Remix64 / RKO.
+
 ## Credits
 
 The music belongs to the remixers and original composers. It is hosted and curated by
