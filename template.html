@@ -2,111 +2,106 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>C64 Radio</title>
 <style>
-  :root {
-    --bg: #1b1a3a; --panel: #26245a; --ink: #e8e6ff; --muted: #a9a6d8;
-    --accent: #8f8cff; --accent-ink: #11102a; --line: #3a3878; --warn: #ffb86b; --fav: #ff7aa8;
+  /* C64 Pro Mono by Style (https://style64.org/c64-truetype), used unmodified under its licence: fonts/license.txt */
+  @font-face {
+    font-family: "C64 Pro Mono";
+    src: url("fonts/C64_Pro_Mono-STYLE.woff2") format("woff2"), url("fonts/C64_Pro_Mono-STYLE.woff") format("woff");
+    font-display: block;
   }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--ink);
-    font: 15px/1.45 ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
-  main { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; }
-  h1 { font-size: 22px; letter-spacing: .08em; margin: 0 0 16px; }
-  button, input { font: inherit; color: var(--ink); background: var(--panel);
-    border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; }
-  button { cursor: pointer; }
-  button:hover { border-color: var(--accent); }
-  button:disabled { opacity: .4; cursor: default; border-color: var(--line); }
-  button.primary, button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
-  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; margin-bottom: 16px; }
-  .now { min-height: 72px; }
-  .title { font-size: 20px; font-weight: 700; word-break: break-word; }
-  .meta { color: var(--muted); margin-top: 4px; }
-  .meta a { color: var(--accent); }
-  .controls { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; align-items: center; }
-  .controls.first { margin-top: 0; }
-  .controls.last { margin-bottom: 0; }
-  .controls input[type=search], .controls input[type=text] { flex: 1; min-width: 180px; }
-  .controls input[type=range] { flex: 1; min-width: 120px; padding: 0; }
-  .spacer { flex: 1; }
-  .progress { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; cursor: pointer; }
-  .progress > div { height: 100%; width: 0; background: var(--accent); }
-  .time { display: flex; justify-content: space-between; color: var(--muted); font-size: 13px; margin-top: 4px; }
-  .status { color: var(--warn); font-size: 13px; min-height: 1.4em; }
-  .fav { color: var(--fav); }
-  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
-  .tabs button { flex: 1; }
-  .rows { list-style: none; margin: 0; padding: 0; }
-  .rows li { display: flex; align-items: center; gap: 6px; padding: 4px 6px; border-radius: 6px; }
-  .rows li.current { background: var(--line); }
-  .rows .info { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .rows .info span { color: var(--muted); }
-  .rows button { padding: 2px 8px; font-size: 13px; }
-  .rows input { flex: 1; padding: 2px 8px; }
-  .count { color: var(--muted); font-size: 13px; margin-bottom: 8px; }
-  .crumb { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
-  .crumb .name { font-weight: 700; font-size: 17px; flex: 1; word-break: break-word; }
-  .menu { position: fixed; z-index: 10; width: 280px; max-height: 60vh; overflow: auto; background: var(--panel);
-    border: 1px solid var(--accent); border-radius: 8px; padding: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.4); }
-  .menu .head { color: var(--muted); font-size: 13px; margin-bottom: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .menu label { display: flex; gap: 8px; align-items: center; padding: 4px 2px; cursor: pointer; }
-  .menu form { display: flex; gap: 6px; margin-top: 8px; }
-  .menu form input { flex: 1; min-width: 0; padding: 4px 8px; }
-  .menu form button { padding: 4px 10px; }
-  footer { color: var(--muted); font-size: 12px; }
-  footer a { color: var(--muted); }
+  html, body { margin: 0; height: 100%; background: #706deb; overflow: hidden; }
+  body.tv { background: radial-gradient(ellipse at 50% 40%, #34343c, #141418 75%); }
+  /* The tube holds the C64 border and screen. Without the TV it fills the window; with it, it sits in the glass. */
+  #tube { position: fixed; inset: 0; z-index: 1; display: flex; align-items: center; justify-content: center; background: #706deb; overflow: hidden; }
+  body.tv #tube { inset: auto; clip-path: url(#glass-clip); }
+  #tv, #tv-glass { position: fixed; display: none; }
+  body.tv #tv, body.tv #tv-glass { display: block; }
+  #tv { z-index: 0; filter: drop-shadow(0 24px 40px rgba(0, 0, 0, .55)); }
+  #tv-glass { z-index: 2; pointer-events: none; }
+  #wrap { position: relative; }
+  /* 320x200 real pixels, enlarged without smoothing so every C64 pixel becomes a sharp block */
+  #screen { display: block; background: #2e2c9b; image-rendering: pixelated; image-rendering: crisp-edges; cursor: default;
+    user-select: none; -webkit-user-select: none; touch-action: none; }
+  /* Hidden field that receives typing (and opens the keyboard on phones) while the grid shows the text. */
+  #kbd { position: absolute; opacity: 0; border: 0; padding: 0; margin: 0; font-size: 16px; pointer-events: none; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 </style>
 </head>
 <body>
-<main>
-  <h1>▶ C64 RADIO</h1>
-
-  <!-- Now playing and transport controls -->
-  <section class="panel">
-    <div class="now">
-      <div class="title" id="r-title">Press play</div>
-      <div class="meta" id="r-meta"></div>
-      <div class="meta" id="r-from"></div>
-    </div>
-    <div class="progress" id="r-progress"><div></div></div>
-    <div class="time"><span id="r-pos">0:00</span><span id="r-dur">0:00</span></div>
-    <div class="controls">
-      <button id="r-prev" title="Previous">⏮</button>
-      <button id="r-play" class="primary" title="Play / pause">▶ Play</button>
-      <button id="r-next" title="Next">⏭</button>
-      <button id="r-shuffle" title="Shuffle">🔀 Shuffle</button>
-      <button id="r-repeat" title="Repeat: off → all → one"></button>
-      <input id="r-vol" type="range" min="0" max="1" step="0.01" value="0.8" title="Volume">
-    </div>
-    <div class="controls last">
-      <button id="r-fav" title="Favourite the current track" disabled>♡ Favourite</button>
-      <button id="r-add" title="Add the current track to a playlist" disabled>+ Playlist</button>
-      <span class="status" id="r-status"></span>
-    </div>
-  </section>
-
-  <!-- Library: browse, favourites, playlist manager, recent -->
-  <section class="panel">
-    <div class="tabs" id="tabs">
-      <button data-view="browse">Browse</button>
-      <button data-view="favs">♥ Favourites</button>
-      <button data-view="playlists">▤ Playlists</button>
-      <button data-view="recent">Recent</button>
-    </div>
-    <div id="view"></div>
-  </section>
-
-  <footer>
-    Music from <a href="https://remix.kwed.org/" target="_blank" rel="noopener">Remix64 / RKO</a>.
-    Index of <span id="f-count"></span> remixes built __BUILT__. Favourites and playlists are stored in this browser;
-    use Export under Playlists to back them up.
-  </footer>
-</main>
-
-<div class="menu" id="add-menu" hidden></div>
+<!-- Old TV, redrawn after "Old TV Vector" from Shmector.com (CC0 1.0). viewBox units; the glass spans x 160-1092, y 122.5-866.5. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <!-- The curved picture tube, in units of its bounding box, used to clip #tube. -->
+  <clipPath id="glass-clip" clipPathUnits="objectBoundingBox">
+    <path d="M.0279 .0484 Q.5 -.0484 .9721 .0484 Q1.0279 .5 .9721 .9516 Q.5 1.0484 .0279 .9516 Q-.0279 .5 .0279 .0484Z"/>
+  </clipPath>
+</svg>
+<svg id="tv" viewBox="0 0 1500 990" aria-hidden="true">
+  <defs>
+    <linearGradient id="tv-case" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#c4c4c4"/><stop offset=".5" stop-color="#a9a9a9"/><stop offset="1" stop-color="#8c8c8c"/>
+    </linearGradient>
+    <linearGradient id="tv-trim" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#d9d9d9"/><stop offset=".5" stop-color="#ffffff"/><stop offset="1" stop-color="#bdbdbd"/>
+    </linearGradient>
+    <linearGradient id="tv-bezel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1b1716"/><stop offset=".45" stop-color="#6e6a69"/><stop offset="1" stop-color="#e2e2e2"/>
+    </linearGradient>
+    <linearGradient id="tv-grille" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2a2726"/><stop offset="1" stop-color="#5a5655"/>
+    </linearGradient>
+    <radialGradient id="tv-knob" cx=".4" cy=".35" r=".75">
+      <stop offset="0" stop-color="#5c5a59"/><stop offset=".7" stop-color="#2a2827"/><stop offset="1" stop-color="#151413"/>
+    </radialGradient>
+    <linearGradient id="tv-handle" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4a4847"/><stop offset="1" stop-color="#121110"/>
+    </linearGradient>
+  </defs>
+  <!-- cabinet -->
+  <rect x="8" y="8" width="1484" height="974" rx="20" fill="url(#tv-case)" stroke="#2b2b2b" stroke-width="6"/>
+  <rect x="55" y="45" width="1390" height="905" rx="8" fill="none" stroke="url(#tv-trim)" stroke-width="7"/>
+  <rect x="70" y="56" width="1360" height="884" rx="10" fill="#585453" stroke="#2b2b2b" stroke-width="3"/>
+  <!-- screen bezel and the dark tube surround -->
+  <rect x="108" y="82" width="1032" height="824" rx="40" fill="url(#tv-bezel)" stroke="#1f1c1b" stroke-width="5"/>
+  <rect x="118" y="92" width="1012" height="804" rx="34" fill="none" stroke="#000" stroke-opacity=".35" stroke-width="3"/>
+  <path d="M186 158.5 Q626 86.5 1066 158.5 Q1118 494.5 1066 830.5 Q626 902.5 186 830.5 Q134 494.5 186 158.5Z" fill="#111" stroke="#0b0b0b" stroke-width="10"/>
+  <!-- speaker -->
+  <rect x="1163" y="80" width="235" height="340" fill="#3d3a39" stroke="#1d1b1a" stroke-width="4"/>
+  <rect x="1177" y="95" width="207" height="310" fill="url(#tv-grille)" stroke="#121110" stroke-width="3"/>
+  <g fill="#141211" stroke="#7a7675" stroke-width="2">
+    <rect x="1190" y="115" width="18" height="272"/><rect x="1220" y="115" width="18" height="272"/>
+    <rect x="1250" y="115" width="18" height="272"/><rect x="1280" y="115" width="18" height="272"/>
+    <rect x="1310" y="115" width="18" height="272"/><rect x="1340" y="115" width="18" height="272"/>
+  </g>
+  <!-- knobs: kept as separate groups so they can be wired up later (e.g. channel and volume) -->
+  <g id="knob-channel" class="knob" transform="translate(1280 552)">
+    <circle r="90" fill="#6b6766"/><circle r="84" fill="url(#tv-knob)" stroke="#0e0d0c" stroke-width="3"/>
+    <g class="knob-handle"><rect x="-112" y="-19" width="190" height="38" rx="19" fill="url(#tv-handle)" stroke="#0e0d0c" stroke-width="3"/></g>
+  </g>
+  <g id="knob-volume" class="knob" transform="translate(1280 762)">
+    <circle r="90" fill="#6b6766"/><circle r="84" fill="url(#tv-knob)" stroke="#0e0d0c" stroke-width="3"/>
+    <g class="knob-handle" transform="rotate(-45)"><rect x="-95" y="-19" width="190" height="38" rx="19" fill="url(#tv-handle)" stroke="#0e0d0c" stroke-width="3"/></g>
+  </g>
+</svg>
+<div id="tube">
+  <div id="wrap">
+    <canvas id="screen" width="320" height="200" aria-hidden="true"></canvas>
+    <input id="kbd" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Text input">
+  </div>
+</div>
+<!-- Shading over the glass: darker towards the curved edges, no reflection. -->
+<svg id="tv-glass" viewBox="0 0 1500 990" aria-hidden="true">
+  <defs>
+    <radialGradient id="tv-vignette" cx="626" cy="494.5" r="600" gradientUnits="userSpaceOnUse">
+      <stop offset=".62" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".55"/>
+    </radialGradient>
+  </defs>
+  <path d="M186 158.5 Q626 86.5 1066 158.5 Q1118 494.5 1066 830.5 Q626 902.5 186 830.5 Q134 494.5 186 158.5Z" fill="url(#tv-vignette)" stroke="#000" stroke-opacity=".6" stroke-width="6"/>
+</svg>
+<div class="sr" aria-live="polite" id="sr-now"></div>
 <input id="lib-file" type="file" accept=".json,application/json" hidden>
+<noscript>C64 Radio needs JavaScript.</noscript>
 
 <script>
 // Song list in the compact form written by build.py: [id step, title, arranger, composer, file?]
@@ -117,62 +112,196 @@ const REMIXES = (({ arrangers, composers, songs }) => {
     return { i: id, t, a: arrangers[a], c: composers[c], f: f || arrangers[a] + " - " + t + ".mp3" };
   });
 })(__REMIXES__);
+const BUILT = "__BUILT__";
 const BY_ID = new Map(REMIXES.map(r => [r.i, r]));
 const NEWEST_FIRST = REMIXES.slice().reverse();
 const RKO = "https://remix.kwed.org";
-const PAGE_SIZE = 200;
-const $ = id => document.getElementById(id);
-const fmt = s => !isFinite(s) ? "0:00" : Math.floor(s / 60) + ":" + String(Math.floor(s % 60)).padStart(2, "0");
 const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
 };
-const setStatus = msg => { $("r-status").textContent = msg || ""; };
+const fmt = s => !isFinite(s) ? "0:00" : Math.floor(s / 60) + ":" + String(Math.floor(s % 60)).padStart(2, "0");
 // Keeps only ids that exist in the index, without duplicates.
 const knownIds = list => [...new Set((Array.isArray(list) ? list : []).filter(i => BY_ID.has(i)))];
 const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-function el(tag, props = {}, ...children) {
-  const e = Object.assign(document.createElement(tag), props);
-  e.append(...children);
-  return e;
+
+/* ======================================================================================
+   Screen: 40x25 cells of C64 screen codes and colours, drawn with the C64 character set.
+   The font places screen code n (0-255, 128+ inverse) at U+EE00 + n.
+   ====================================================================================== */
+const W = 40, H = 25;
+const BLACK = 0, WHITE = 1, CYAN = 3, BLUE = 6, YELLOW = 7, LRED = 10, DGREY = 11, LGREEN = 13, LBLUE = 14, LGREY = 15;
+const codes = new Uint8Array(W * H), cols = new Uint8Array(W * H);
+let hits = [], mouse = { x: -1, y: -1 }, px = 16;
+
+// Unicode → screen code for the symbols used here and the box/block characters in song data.
+const SYMBOLS = { "@": 0, "[": 27, "£": 28, "]": 29, "↑": 30, "^": 30, "←": 31, "_": 100, "|": 66, "─": 64, "━": 64,
+  "│": 66, "┃": 66, "┌": 112, "┐": 110, "└": 109, "┘": 125, "├": 107, "┤": 115, "┬": 114, "┴": 113, "┼": 91,
+  "╭": 85, "╮": 73, "╰": 74, "╯": 75, "╱": 78, "╲": 77, "\\": 77, "╳": 86, "▌": 97, "▄": 98, "▔": 99, "▁": 100,
+  "▎": 101, "▒": 102, "▍": 117, "▂": 111, "▃": 121, "▖": 123, "▗": 108, "▘": 126, "▝": 124, "▚": 127, "◤": 105,
+  "◥": 95, "●": 81, "•": 81, "○": 87, "♠": 65, "♣": 88, "♥": 83, "❤": 83, "♦": 90, "◆": 90, "π": 94, "█": 160,
+  "‘": 39, "’": 39, "`": 39, "´": 39, "“": 34, "”": 34, "«": 60, "»": 62, "‐": 45, "–": 45, "—": 45, "~": 45,
+  "…": 46, "·": 46, "{": 40, "}": 41, "×": 24, "ß": 19, "Ø": 15, "Æ": 1, "Œ": 15, "Ð": 4, "Þ": 16, "Ł": 12, "Đ": 4 };
+function toCodes(s) {
+  const out = [];
+  for (const ch of String(s).normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase()) {
+    const u = ch.codePointAt(0);
+    if (u >= 65 && u <= 90) out.push(u - 64);                    // A-Z
+    else if (u >= 32 && u <= 63) out.push(u);                    // space, digits, punctuation
+    else out.push(SYMBOLS[ch] ?? 63);                            // anything else: symbol or "?"
+  }
+  return out;
 }
-function button(label, act, title, cls) {
-  const b = el("button", { textContent: label, title });
-  b.dataset.act = act;
-  if (cls) b.className = cls;
-  return b;
+const asCodes = v => Array.isArray(v) ? v : toCodes(v);
+const pad = (v, n) => { const c = asCodes(v).slice(0, n); while (c.length < n) c.push(32); return c; };
+const rpad = (v, n) => { const c = asCodes(v).slice(-n); while (c.length < n) c.unshift(32); return c; };
+
+function put(x, y, c, col) { if (x >= 0 && x < W && y >= 0 && y < H) { codes[y * W + x] = c; cols[y * W + x] = col; } }
+function text(x, y, v, col = LBLUE, rev = false) {
+  const c = asCodes(v);
+  c.forEach((k, i) => put(x + i, y, rev ? k ^ 128 : k, col));
+  return c.length;
+}
+function fill(x, y, w, h, c = 32, col = LBLUE) { for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) put(x + i, y + j, c, col); }
+function box(x, y, w, h, col = LBLUE, title = "", right = "") {
+  fill(x + 1, y + 1, w - 2, h - 2);
+  for (let i = 1; i < w - 1; i++) { put(x + i, y, 64, col); put(x + i, y + h - 1, 64, col); }
+  for (let j = 1; j < h - 1; j++) { put(x, y + j, 66, col); put(x + w - 1, y + j, 66, col); }
+  put(x, y, 112, col); put(x + w - 1, y, 110, col); put(x, y + h - 1, 109, col); put(x + w - 1, y + h - 1, 125, col);
+  if (title) text(x + 2, y, pad(" " + title + " ", Math.min(w - 4, toCodes(title).length + 2)), WHITE);
+  if (right) { const r = asCodes(" " + right + " "); text(x + w - 2 - r.length, y, r, LBLUE); }
+}
+const over = (x, y, w, h = 1) => mouse.x >= x && mouse.x < x + w && mouse.y >= y && mouse.y < y + h;
+function hit(x, y, w, h, fn) { hits.push({ x, y, w, h, fn }); }
+// Buttons are inverse text; hovered buttons turn white. Returns the x after the button and a gap.
+function btn(x, y, label, fn, { col = LBLUE, disabled = false } = {}) {
+  const c = asCodes(label);
+  text(x, y, c, disabled ? DGREY : over(x, y, c.length) ? WHITE : col, !disabled);
+  if (!disabled) hit(x, y, c.length, 1, fn);
+  return x + c.length + 1;
 }
 
-/* ---------- settings ---------- */
-// view: what the library panel shows ("browse", "favs", "playlists", "recent" or a playlist id).
-// queue: what the player plays from; it only changes when the user presses play somewhere.
+const $ = id => document.getElementById(id);
+
+// The screen is drawn as real pixels: a 320x200 image where each cell is the 8x8 bitmap of its
+// screen code. The bitmaps (a copy of the C64 character ROM) are read from the font once at start-up.
+// Colodore palette (Pepto): 0 black, 1 white, 2 red, 3 cyan, 4 purple, 5 green, 6 blue, 7 yellow,
+// 8 orange, 9 brown, 10 light red, 11 dark grey, 12 grey, 13 light green, 14 light blue, 15 light grey
+const PALETTE = ["#000000", "#ffffff", "#813338", "#75cec8", "#8e3c97", "#56ac4d", "#2e2c9b", "#edf171",
+                 "#8e5029", "#553800", "#c46c71", "#4a4a4a", "#7b7b7b", "#a9ff9f", "#706deb", "#b2b2b2"]
+  .map(h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)));
+const CHARSET = new Uint8Array(256 * 8);              // 8 bytes per screen code, bit 7 = leftmost pixel
+let charsetReady = false;
+async function loadCharset() {
+  const S = 64, font = S + 'px "C64 Pro Mono"';
+  await document.fonts.load(font, "\uEE00");
+  const c = document.createElement("canvas"); c.width = c.height = S * 16;
+  const g = c.getContext("2d", { willReadFrequently: true });
+  g.font = font; g.fillStyle = "#fff";
+  // the font's ascent is 7/8 em, so the baseline sits 56 of 64 pixels down each cell
+  for (let n = 0; n < 256; n++) g.fillText(String.fromCharCode(0xEE00 + n), (n % 16) * S, Math.floor(n / 16) * S + S * 7 / 8);
+  const data = g.getImageData(0, 0, c.width, c.height).data;
+  for (let n = 0; n < 256; n++) for (let row = 0; row < 8; row++) {
+    let bits = 0;
+    for (let k = 0; k < 8; k++) {                       // sample the centre of each 8x8 block
+      const x = (n % 16) * S + k * 8 + 4, y = Math.floor(n / 16) * S + row * 8 + 4;
+      if (data[(y * c.width + x) * 4 + 3] > 127) bits |= 128 >> k;
+    }
+    CHARSET[n * 8 + row] = bits;
+  }
+  charsetReady = true;
+  shownCodes.fill(255); render();
+}
+
+let screenCtx = null, frame = null;
+const shownCodes = new Uint8Array(W * H).fill(255), shownCols = new Uint8Array(W * H);
+function flush() {
+  if (!charsetReady) return;
+  if (!screenCtx) { screenCtx = $("screen").getContext("2d"); frame = screenCtx.createImageData(W * 8, H * 8); }
+  const d = frame.data, bg = PALETTE[BLUE];
+  let changed = false;
+  for (let cell = 0; cell < W * H; cell++) {
+    if (codes[cell] === shownCodes[cell] && cols[cell] === shownCols[cell]) continue;
+    shownCodes[cell] = codes[cell]; shownCols[cell] = cols[cell]; changed = true;
+    const fg = PALETTE[cols[cell]], cx = (cell % W) * 8, cy = Math.floor(cell / W) * 8;
+    for (let row = 0; row < 8; row++) {
+      const bits = CHARSET[codes[cell] * 8 + row];
+      let i = ((cy + row) * W * 8 + cx) * 4;
+      for (let k = 0; k < 8; k++, i += 4) {
+        const c = bits & (128 >> k) ? fg : bg;
+        d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 255;
+      }
+    }
+  }
+  if (changed) screenCtx.putImageData(frame, 0, 0);
+}
+
+// Largest size that fits with a C64-like border; whole multiples of 8 px keep the 8x8 glyphs sharp.
+// The TV is drawn in a 1500x990 viewBox; its glass spans this box. It is shown only when the window has room.
+const TV = { w: 1500, h: 990, glass: { x: 160, y: 122.5, w: 932, h: 744 } };
+function fit() {
+  const tv = innerWidth >= 720 && innerHeight >= 500;
+  document.body.classList.toggle("tv", tv);
+  let areaW = innerWidth, areaH = innerHeight, bw = innerWidth < 640 ? 1 : 3, bh = innerHeight < 480 ? 1 : 3;
+  if (tv) {
+    const s = Math.min(innerWidth * 0.94 / TV.w, innerHeight * 0.92 / TV.h);
+    const left = (innerWidth - TV.w * s) / 2, top = (innerHeight - TV.h * s) / 2;
+    for (const id of ["tv", "tv-glass"]) Object.assign($(id).style, { left: left + "px", top: top + "px", width: TV.w * s + "px", height: TV.h * s + "px" });
+    const g = TV.glass;
+    areaW = g.w * s; areaH = g.h * s;
+    Object.assign($("tube").style, { left: left + g.x * s + "px", top: top + g.y * s + "px", width: areaW + "px", height: areaH + "px" });
+    bw = 3.5; bh = 3.5;                                  // classic border, also keeps the screen clear of the curved edges
+  } else {
+    for (const k of ["left", "top", "width", "height"]) $("tube").style[k] = "";
+  }
+  const best = Math.min(areaW / (W + 2 * bw), areaH / (H + 2 * bh));
+  const unit = 8 / (devicePixelRatio || 1);           // one C64 pixel = one device pixel or more
+  px = best >= 8 * unit ? Math.floor(best / unit) * unit : Math.max(6, best);
+  Object.assign($("screen").style, { width: W * px + "px", height: H * px + "px" });
+  // Put the screen's corner on a whole device pixel so the enlarged pixels stay even.
+  const wrap = $("wrap"), dpr = devicePixelRatio || 1;
+  wrap.style.transform = "";
+  const r = $("screen").getBoundingClientRect();
+  wrap.style.transform = "translate(" + (Math.round(r.left * dpr) / dpr - r.left) + "px," + (Math.round(r.top * dpr) / dpr - r.top) + "px)";
+  render();
+}
+
+/* ======================================================================================
+   Library, settings and play queue
+   ====================================================================================== */
+// view: what the library box shows ("browse", "favs", "playlists", "recent" or a playlist id).
+// queue: what the player plays from; it only changes when the user starts playback somewhere.
 const settings = Object.assign({ shuffle: true, repeat: "all", vol: 0.8, view: "browse", queue: { source: "all", filter: "" } },
                                store.get("settings", {}));
 const saveSettings = () => store.set("settings", settings);
 const searches = { browse: "", favs: "", playlist: "" };
 
-/* ---------- library: favourites and playlists, stored by remix id ---------- */
 const lib = (() => {
   const saved = store.get("library", {});
   return {
     favs: knownIds(saved.favs),
     playlists: (Array.isArray(saved.playlists) ? saved.playlists : [])
       .filter(p => p && typeof p.name === "string")
-      .map(p => ({ id: String(p.id || newId()), name: p.name.slice(0, 80), tracks: knownIds(p.tracks) }))
+      .map(p => ({ id: String(p.id || newId()), name: p.name.slice(0, 40), tracks: knownIds(p.tracks) }))
   };
 })();
 const saveLib = () => store.set("library", lib);
-const isFav = r => lib.favs.includes(r.i);
+const isFav = r => !!r && lib.favs.includes(r.i);
 const playlist = id => lib.playlists.find(p => p.id === id);
 
+let statusLine = { msg: "", col: YELLOW, until: 0 };
+function setStatus(msg, col = YELLOW) { statusLine = { msg, col, until: Date.now() + 5000 }; render(); }
+
 function toggleFav(r) {
+  if (!r) return;
   const n = lib.favs.indexOf(r.i);
   n >= 0 ? lib.favs.splice(n, 1) : lib.favs.push(r.i);
   saveLib(); libraryChanged();
+  setStatus(n >= 0 ? "REMOVED FROM FAVOURITES." : "ADDED TO FAVOURITES.", LGREEN);
 }
 
 function createPlaylist(name) {
-  name = (name || "").trim().slice(0, 80);
+  name = (name || "").trim().slice(0, 40);
   if (!name) return null;
   const p = { id: newId(), name, tracks: [] };
   lib.playlists.push(p); saveLib(); libraryChanged();
@@ -183,14 +312,13 @@ function togglePlaylistTrack(p, r) {
   const n = p.tracks.indexOf(r.i);
   n >= 0 ? p.tracks.splice(n, 1) : p.tracks.push(r.i);
   saveLib(); libraryChanged();
-  setStatus((n >= 0 ? "Removed from “" : "Added to “") + p.name + "”.");
+  setStatus((n >= 0 ? "REMOVED FROM " : "ADDED TO ") + p.name, LGREEN);
 }
 
-/* ---------- queue ---------- */
 const player = new Audio();
 const preload = new Audio();          // warms up the next track so transitions are near-instant
 preload.preload = "auto";
-let order = [], pos = -1, current = null, uncounted = null, failures = 0, shown = PAGE_SIZE, recent = [];
+let order = [], pos = -1, current = null, uncounted = null, failures = 0, recent = [];
 
 const fileUrl = r => RKO + "/files/RKOfiles/" + encodeURIComponent(r.f);
 
@@ -202,17 +330,16 @@ function countPlay(r) {
 }
 
 function tracksFor(source, filter) {
-  let list = source === "all" ? NEWEST_FIRST
-           : source === "favs" ? lib.favs.map(i => BY_ID.get(i))
-           : source === "recent" ? recent
-           : (playlist(source) || { tracks: [] }).tracks.map(i => BY_ID.get(i));
+  const list = source === "all" ? NEWEST_FIRST
+             : source === "favs" ? lib.favs.map(i => BY_ID.get(i))
+             : source === "recent" ? recent
+             : (playlist(source) || { tracks: [] }).tracks.map(i => BY_ID.get(i));
   const q = (filter || "").trim().toLowerCase();
   return q ? list.filter(r => (r.t + " " + r.a + " " + r.c).toLowerCase().includes(q)) : list;
 }
 
 function sourceName(source) {
-  return source === "all" ? "All remixes" : source === "favs" ? "♥ Favourites"
-       : source === "recent" ? "Recently played" : "▤ " + ((playlist(source) || {}).name || "playlist");
+  return source === "all" ? "ALL REMIXES" : source === "favs" ? "FAVOURITES" : (playlist(source) || { name: "?" }).name;
 }
 
 function shuffled(list) {
@@ -232,13 +359,13 @@ function rebuildOrder(first = current) {
     order = list.slice();
   }
   pos = current ? order.indexOf(current) : -1;
-  renderFrom(); warmNext();
+  warmNext();
 }
 
 // Points the player at a new source and starts it, optionally at a given track.
 function playSource(source, filter, track) {
+  if (source === "recent") source = "all";   // recent is a moving list; play a pick from it, then carry on with all
   settings.queue = { source, filter: filter || "" }; saveSettings();
-  if (source === "recent") settings.queue.source = "all";   // recent is a moving list; play it as a one-off pick
   if (track) { rebuildOrder(track); pos = order.indexOf(track); return playTrack(track); }
   current = null; rebuildOrder(null); next();
 }
@@ -258,20 +385,20 @@ function playTrack(r) {
   current = r;
   player.src = fileUrl(r);
   uncounted = r;
-  player.play().catch(e => setStatus("Playback blocked: " + e.message + " — press Play."));
-  document.title = r.t + " — " + r.a;
+  player.play().catch(e => setStatus("?PLAYBACK BLOCKED. PRESS PLAY."));
+  document.title = r.t + " - " + r.a;
+  $("sr-now").textContent = "Now playing " + r.t + " by " + r.a;
   if ("mediaSession" in navigator) {
-    navigator.mediaSession.metadata = new MediaMetadata({ title: r.t, artist: r.a, album: "Remix64 · " + (r.c || "C64") });
+    navigator.mediaSession.metadata = new MediaMetadata({ title: r.t, artist: r.a, album: "Remix64 / " + (r.c || "C64") });
   }
   recent = [r, ...recent.filter(x => x !== r)].slice(0, 30);
-  renderNow(); renderView();
-  warmNext();
+  warmNext(); render();
 }
 
 // auto = true when the previous track ended on its own; repeat-one only applies then.
 function next(auto = false) {
   if (auto && settings.repeat === "one" && current) { uncounted = current; player.currentTime = 0; player.play(); return; }
-  if (!order.length) { setStatus("Nothing to play: the list is empty."); return; }
+  if (!order.length) return setStatus("?NOTHING TO PLAY: THE LIST IS EMPTY.");
   if (pos + 1 < order.length) {
     pos++;
   } else if (settings.repeat === "all") {
@@ -282,8 +409,7 @@ function next(auto = false) {
     pos = 0;
   } else {
     player.pause();
-    setStatus("End of list.");
-    return;
+    return setStatus("END OF LIST.");
   }
   playTrack(order[pos]);
 }
@@ -293,263 +419,512 @@ function prev() {
   pos--; playTrack(order[pos]);
 }
 
-/* ---------- player rendering ---------- */
-function renderNow() {
-  const r = current;
-  $("r-fav").disabled = $("r-add").disabled = !r;
-  if (!r) return;
-  $("r-title").textContent = r.t;
-  $("r-meta").replaceChildren(
-    "Remix by " + r.a + (r.c ? " · original by " + r.c : "") + " · ",
-    el("a", { href: RKO + "/remix/" + r.i, target: "_blank", rel: "noopener", textContent: "#" + r.i })
-  );
-  $("r-fav").textContent = isFav(r) ? "♥ Favourite" : "♡ Favourite";
-  $("r-fav").classList.toggle("fav", isFav(r));
-}
-
-function renderFrom() {
-  const q = settings.queue;
-  $("r-from").textContent = current || order.length
-    ? "Playing from " + sourceName(q.source) + (q.filter ? " matching “" + q.filter + "”" : "") + " · " + order.length + " tracks"
-    : "";
-}
-
-function renderModes() {
-  $("r-shuffle").classList.toggle("on", settings.shuffle);
-  $("r-repeat").textContent = { off: "🔁 Repeat: off", all: "🔁 Repeat: all", one: "🔂 Repeat: one" }[settings.repeat];
-  $("r-repeat").classList.toggle("on", settings.repeat !== "off");
-}
-
-/* ---------- library views ---------- */
-const isPlaylistView = () => !!playlist(settings.view);
-const searchKey = () => isPlaylistView() ? "playlist" : settings.view;
-const viewSource = () => settings.view === "browse" ? "all" : settings.view;
-
-function trackRow(r, { reorder = false } = {}) {
-  const li = el("li");
-  li.dataset.id = r.i;
-  li.classList.toggle("current", r === current);
-  const fav = button(isFav(r) ? "♥" : "♡", "fav", "Favourite", isFav(r) ? "fav" : "");
-  li.append(button("▶", "play", "Play"),
-            el("div", { className: "info" }, r.t, el("span", { textContent: " — " + r.a + (r.c ? " · " + r.c : "") })),
-            fav, button("+", "add", "Add to playlist"));
-  if (reorder) li.append(button("↑", "up", "Move up"), button("↓", "down", "Move down"), button("✕", "remove", "Remove from this playlist"));
-  return li;
-}
-
-function searchBox() {
-  const input = el("input", { type: "search", value: searches[searchKey()], id: "search",
-                              placeholder: "Search title, remixer or composer (e.g. Hubbard)" });
-  let t;
-  input.oninput = () => { clearTimeout(t); t = setTimeout(() => { searches[searchKey()] = input.value; shown = PAGE_SIZE; renderList(); }, 200); };
-  return el("div", { className: "controls first" }, input,
-            button("▶ Play these", "play-all", "Play the tracks shown, from the top or shuffled"));
-}
-
-function renderTabs() {
-  document.querySelectorAll("#tabs button").forEach(b => {
-    const v = b.dataset.view;
-    b.classList.toggle("on", v === settings.view || (v === "playlists" && isPlaylistView()));
-    if (v === "favs") b.textContent = "♥ Favourites (" + lib.favs.length + ")";
-    if (v === "playlists") b.textContent = "▤ Playlists (" + lib.playlists.length + ")";
-  });
-}
-
-function renderView() {
-  if (settings.view !== "browse" && settings.view !== "favs" && settings.view !== "playlists"
-      && settings.view !== "recent" && !isPlaylistView()) settings.view = "browse";
-  renderTabs();
-  const v = $("view");
-  const focused = document.activeElement && document.activeElement.id;
-  v.replaceChildren();
-  if (settings.view === "playlists") return renderManager(v);
-  if (isPlaylistView()) {
-    const p = playlist(settings.view);
-    v.append(el("div", { className: "crumb" },
-      button("← Playlists", "back", "All playlists"), el("span", { className: "name", textContent: p.name })));
+function togglePlay() {
+  if (!current || (player.ended && pos >= order.length - 1)) {
+    const v = settings.view;
+    return v === "playlists" || v === "recent" ? playSource(settings.queue.source, settings.queue.filter)
+                                               : playSource(viewSource(), searches[searchKey()]);
   }
-  if (settings.view !== "recent") v.append(searchBox());
-  v.append(el("div", { className: "count", id: "count" }), el("ul", { className: "rows", id: "list" }),
-           el("div", { className: "controls last" }, button("Show more", "more", "Show more tracks")));
-  renderList();
-  if (focused === "search") { const s = $("search"); s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
+  player.paused ? player.play() : player.pause();
 }
 
-function renderList() {
-  const list = tracksFor(viewSource(), searches[searchKey()]);
-  const reorder = isPlaylistView() && !searches.playlist.trim();
-  $("list").replaceChildren(...list.slice(0, shown).map(r => trackRow(r, { reorder })));
-  const q = (searches[searchKey()] || "").trim();
-  const empty = q ? "No tracks match “" + q + "”."
-              : settings.view === "favs" ? "No favourites yet. Press ♡ on any track."
-              : settings.view === "recent" ? "Nothing played yet."
-              : "This playlist is empty. Go to Browse, search for songs and press + to add them here.";
-  $("count").textContent = list.length ? list.length + " tracks" + (list.length > shown ? ", showing " + shown : "") : empty;
-  document.querySelector('[data-act="more"]').hidden = list.length <= shown;
-  const playAll = document.querySelector('[data-act="play-all"]');
-  if (playAll) playAll.disabled = !list.length;
-}
-
-function renderManager(v) {
-  const name = el("input", { type: "text", id: "pl-name", placeholder: "New playlist name", maxLength: 80 });
-  const form = el("form", { className: "controls first" }, name, el("button", { type: "submit", className: "primary", textContent: "+ Create playlist" }));
-  form.onsubmit = e => { e.preventDefault(); const p = createPlaylist(name.value); if (p) setStatus("Created “" + p.name + "”."); };
-  const rows = lib.playlists.map(p => {
-    const li = el("li");
-    li.dataset.pl = p.id;
-    li.classList.toggle("current", settings.queue.source === p.id && !!current);
-    li.append(button("▶", "pl-play", "Play this playlist"),
-              el("div", { className: "info" }, p.name, el("span", { textContent: " — " + p.tracks.length + " tracks" })),
-              button("Open", "pl-open", "Show and edit tracks"), button("Rename", "pl-rename", "Rename"),
-              button("Delete", "pl-delete", "Delete playlist"));
-    return li;
-  });
-  v.append(form,
-    el("div", { className: "count", textContent: lib.playlists.length ? "" : "No playlists yet. Create one above, then use + on any track to add it." }),
-    el("ul", { className: "rows", id: "pl-list" }, ...rows),
-    el("div", { className: "controls last" }, el("span", { className: "spacer" }),
-      button("Export library", "export", "Download favourites and playlists as JSON"),
-      button("Import library", "import", "Merge favourites and playlists from a JSON export")));
-}
+function setVol(v) { v = Math.min(1, Math.max(0, Math.round(v * 10) / 10)); player.volume = preload.volume = v; settings.vol = v; saveSettings(); render(); }
+function toggleShuffle() { settings.shuffle = !settings.shuffle; saveSettings(); rebuildOrder(); render(); }
+function cycleRepeat() { settings.repeat = { off: "all", all: "one", one: "off" }[settings.repeat]; saveSettings(); warmNext(); render(); }
 
 // After favourites or playlists change: keep playing, but refresh the order if it came from them.
 function libraryChanged() {
   if (settings.queue.source !== "all" && settings.queue.source !== "favs" && !playlist(settings.queue.source)) settings.queue = { source: "all", filter: "" };
-  renderNow(); renderView(); renderAddMenu();
   if (settings.queue.source !== "all") rebuildOrder();
-  saveSettings();
+  saveSettings(); render();
 }
+
+/* ======================================================================================
+   Views, selection and modal boxes
+   ====================================================================================== */
+const LIST_Y = 13, LIST_H = 9;
+const ui = { sel: {}, top: {}, edit: null, overlay: null, lastClick: { t: 0, i: -1 } };
+const isPlaylistView = () => !!playlist(settings.view);
+const isTrackView = () => settings.view !== "playlists";
+const searchKey = () => isPlaylistView() ? "playlist" : settings.view;
+const viewSource = () => settings.view === "browse" ? "all" : settings.view;
+const viewList = () => isTrackView() ? tracksFor(viewSource(), searches[searchKey()] || "") : lib.playlists;
+const canReorder = () => isPlaylistView() && !searches.playlist.trim();
+
+function sel() {
+  const n = viewList().length, v = settings.view;
+  ui.sel[v] = Math.max(0, Math.min(n - 1, ui.sel[v] || 0));
+  let top = ui.top[v] || 0;
+  if (ui.sel[v] < top) top = ui.sel[v];
+  if (ui.sel[v] >= top + LIST_H) top = ui.sel[v] - LIST_H + 1;
+  ui.top[v] = Math.max(0, Math.min(top, Math.max(0, n - LIST_H)));
+  return ui.sel[v];
+}
+function moveSel(d) { ui.sel[settings.view] = (ui.sel[settings.view] || 0) + d; sel(); render(); }
+const selected = () => viewList()[sel()];
 
 function showView(view) {
-  settings.view = view; shown = PAGE_SIZE; saveSettings(); closeAddMenu(); renderView();
+  if (playlist(view) && view !== settings.view) searches.playlist = "";
+  settings.view = view; saveSettings(); stopEdit(); render();
+}
+const TABS = ["browse", "favs", "playlists", "recent"];
+function nextTab(d) {
+  const k = TABS.indexOf(isPlaylistView() ? "playlists" : settings.view);
+  showView(TABS[(k + d + TABS.length) % TABS.length]);
 }
 
-/* ---------- "add to playlist" menu ---------- */
-let menuTrack = null;
-function openAddMenu(r, anchor) {
-  menuTrack = r;
-  const m = $("add-menu"); m.hidden = false;
-  renderAddMenu();
-  const b = anchor.getBoundingClientRect();
-  const left = Math.max(8, Math.min(b.right - m.offsetWidth, innerWidth - m.offsetWidth - 8));
-  const top = b.bottom + 6 + m.offsetHeight < innerHeight ? b.bottom + 6 : Math.max(8, b.top - m.offsetHeight - 6);
-  m.style.left = left + "px"; m.style.top = top + "px";
-  if (!lib.playlists.length) m.querySelector("input[type=text]").focus();
+// Activate the selected row: play a track, or open a playlist.
+function activate() {
+  const item = selected(); if (!item) return;
+  if (!isTrackView()) return showView(item.id);
+  playSource(viewSource(), searches[searchKey()], item);
 }
-function closeAddMenu() { $("add-menu").hidden = true; menuTrack = null; }
-function renderAddMenu() {
-  const m = $("add-menu"), r = menuTrack;
-  if (m.hidden || !r) return;
-  const boxes = lib.playlists.map(p => {
-    const cb = el("input", { type: "checkbox", checked: p.tracks.includes(r.i) });
-    cb.onchange = () => togglePlaylistTrack(p, r);
-    return el("label", {}, cb, p.name + " (" + p.tracks.length + ")");
-  });
-  const name = el("input", { type: "text", placeholder: "New playlist…", maxLength: 80 });
-  const form = el("form", {}, name, el("button", { type: "submit", textContent: "Create" }));
-  form.onsubmit = e => { e.preventDefault(); const p = createPlaylist(name.value); if (p) togglePlaylistTrack(p, r); };
-  m.replaceChildren(el("div", { className: "head", textContent: "Add “" + r.t + "” to:" }), ...boxes, form);
+
+function moveTrack(d) {
+  const p = playlist(settings.view); if (!p || !canReorder()) return;
+  const n = sel(), m = n + d;
+  if (m < 0 || m >= p.tracks.length) return;
+  [p.tracks[n], p.tracks[m]] = [p.tracks[m], p.tracks[n]];
+  ui.sel[settings.view] = m; saveLib(); libraryChanged();
 }
-document.addEventListener("click", e => {
-  const m = $("add-menu");
-  if (!m.hidden && !m.contains(e.target) && !e.target.closest('[data-act="add"], #r-add')) closeAddMenu();
+function removeTrack() {
+  const p = playlist(settings.view), r = selected(); if (!p || !r) return;
+  p.tracks.splice(p.tracks.indexOf(r.i), 1); saveLib(); libraryChanged();
+  setStatus("REMOVED FROM " + p.name, LGREEN);
+}
+
+/* --- text editing through the hidden input --- */
+const kbd = $("kbd");
+function startEdit(kind, value, onDone) {
+  ui.edit = { kind, onDone };
+  kbd.value = value; kbd.focus(); kbd.setSelectionRange(value.length, value.length);
+  render();
+}
+function stopEdit() { if (ui.edit) { ui.edit = null; kbd.blur(); render(); } }
+const startSearch = () => isTrackView() && settings.view !== "recent" && startEdit("search", searches[searchKey()]);
+kbd.addEventListener("input", () => {
+  if (ui.edit && ui.edit.kind === "search") { searches[searchKey()] = kbd.value; ui.sel[settings.view] = 0; }
+  render();
 });
-document.addEventListener("keydown", e => { if (e.key === "Escape") closeAddMenu(); });
+kbd.addEventListener("keydown", e => {
+  if (!ui.edit) return;
+  if (e.key === "Enter" || e.key === "Escape" || (ui.edit.kind === "search" && (e.key === "ArrowDown" || e.key === "ArrowUp"))) {
+    e.preventDefault(); e.stopPropagation();
+    const done = ui.edit.onDone, ok = e.key !== "Escape";
+    stopEdit();
+    if (done) done(ok ? kbd.value : null);
+    if (e.key === "ArrowDown") moveSel(1);
+  }
+});
+kbd.addEventListener("blur", () => { if (ui.edit && ui.edit.kind === "search") { ui.edit = null; render(); } });
 
-/* ---------- events ---------- */
-$("tabs").onclick = e => { const b = e.target.closest("button"); if (b) showView(b.dataset.view); };
+/* --- modal boxes: drawn over the screen; clicks outside close them --- */
+function openPrompt(title, value, onOk) {
+  ui.overlay = { kind: "prompt", title, x: 2, y: 9, w: 36, h: 6, cancel: closeOverlay };
+  startEdit("prompt", value, v => { closeOverlay(); if (v !== null && v.trim()) onOk(v.trim()); });
+}
+function openConfirm(lines, onYes) {
+  ui.overlay = { kind: "confirm", lines, x: 3, y: 9, w: 34, h: lines.length + 4, onYes, cancel: closeOverlay };
+  render();
+}
+function openAddMenu(track) {
+  if (!track) return;
+  const rows = Math.min(10, lib.playlists.length + 1);
+  ui.overlay = { kind: "menu", track, sel: 0, top: 0, x: 3, y: Math.max(1, 9 - Math.floor(rows / 2)), w: 34, h: rows + 7, cancel: closeOverlay };
+  render();
+}
+function openHelp() { ui.overlay = { kind: "help", x: 1, y: 1, w: 38, h: 23, cancel: closeOverlay }; render(); }
+function closeOverlay() { ui.overlay = null; stopEdit(); render(); }
 
-$("view").onclick = e => {
-  const btn = e.target.closest("button[data-act]"); if (!btn) return;
-  const act = btn.dataset.act, li = btn.closest("li");
-  const r = li && li.dataset.id ? BY_ID.get(Number(li.dataset.id)) : null;
-  const pl = li && li.dataset.pl ? playlist(li.dataset.pl) : playlist(settings.view);
-  switch (act) {
-    case "play": return playSource(viewSource(), searches[searchKey()], r);
-    case "play-all": return playSource(viewSource(), searches[searchKey()]);
-    case "fav": return toggleFav(r);
-    case "add": return menuTrack === r && !$("add-menu").hidden ? closeAddMenu() : openAddMenu(r, btn);
-    case "more": shown += PAGE_SIZE; return renderList();
-    case "back": return showView("playlists");
-    case "export": return exportLibrary();
-    case "import": return $("lib-file").click();
-    case "pl-open": return showView(pl.id);
-    case "pl-play":
-      if (!pl.tracks.length) return setStatus("“" + pl.name + "” is empty.");
-      return playSource(pl.id, "");
-    case "pl-delete":
-      if (!confirm("Delete playlist “" + pl.name + "” (" + pl.tracks.length + " tracks)?")) return;
-      lib.playlists.splice(lib.playlists.indexOf(pl), 1); saveLib(); return libraryChanged();
-    case "pl-rename": {
-      const input = el("input", { type: "text", value: pl.name, maxLength: 80 });
-      const save = () => { const n = input.value.trim(); if (n && n !== pl.name) { pl.name = n; saveLib(); } libraryChanged(); };
-      input.onkeydown = ev => { if (ev.key === "Enter") input.blur(); if (ev.key === "Escape") { input.value = pl.name; input.blur(); } };
-      input.onblur = save;
-      li.querySelector(".info").replaceWith(input); input.focus(); input.select();
+function menuItems(o) { return [...lib.playlists, { newList: true }]; }
+function menuActivate(o, item) {
+  if (item.newList) {
+    const track = o.track;
+    return openPrompt("NEW LIST", "", name => { const p = createPlaylist(name); if (p) togglePlaylistTrack(p, track); openAddMenu(track); });
+  }
+  togglePlaylistTrack(item, o.track);
+}
+
+/* ======================================================================================
+   Drawing
+   ====================================================================================== */
+function render() { draw(); flush(); placeKbd(); }
+
+function draw() {
+  codes.fill(32); cols.fill(LBLUE); hits = [];
+  drawHeader(); drawNow(); drawTabs(); drawLibrary(); drawStatus();
+  if (ui.overlay) { hits = []; drawOverlay(ui.overlay); }
+}
+
+function drawHeader() {
+  text(0, 0, pad(" **** C64 REMIX RADIO ****", 26).concat(rpad(REMIXES.length + " TUNES ", 11)), CYAN, true);
+  btn(37, 0, " ? ", openHelp, { col: CYAN });
+}
+
+function marquee(v, n) {
+  const c = asCodes(v);
+  if (c.length <= n) return c;
+  const loop = c.concat(toCodes("     "));
+  const o = Math.floor(Date.now() / 300) % loop.length;
+  return loop.concat(loop).slice(o, o + n);
+}
+
+function drawNow() {
+  const q = settings.queue;
+  box(0, 1, 40, 8, LBLUE, current || order.length ? "FROM " + sourceName(q.source) + (q.filter ? " / " + q.filter : "") : "NOW PLAYING");
+  if (current) {
+    text(1, 2, marquee(current.t, 38), WHITE);
+    text(1, 3, pad("BY " + current.a, 38), LBLUE);
+    const id = "#" + current.i;
+    text(1, 4, pad(current.c ? "ORIG " + current.c : "", 37 - id.length), LGREY);
+    const link = 39 - id.length;
+    text(link, 4, id, over(link, 4, id.length) ? WHITE : CYAN);
+    hit(link, 4, id.length, 1, () => window.open(RKO + "/remix/" + current.i, "_blank", "noopener"));
+  } else {
+    text(1, 2, "PRESS PLAY, OR PICK A TUNE BELOW", WHITE);
+    text(1, 3, "AND PRESS RETURN. PRESS ? FOR HELP.", LBLUE);
+  }
+  // progress bar: half-cell resolution using full blocks and the left-half block
+  const BAR = 26, d = player.duration, t = player.currentTime;
+  const halves = d ? Math.round(Math.min(1, t / d) * BAR * 2) : 0;
+  for (let i = 0; i < BAR; i++) {
+    const h = halves - i * 2;
+    put(1 + i, 5, h >= 2 ? 160 : h === 1 ? 97 : 102, h >= 1 ? WHITE : DGREY);
+  }
+  hit(1, 5, BAR, 1, x => { if (player.duration) player.currentTime = (x - 1 + 0.5) / BAR * player.duration; });
+  text(28, 5, rpad(fmt(t) + "/" + fmt(d), 11), LBLUE);
+
+  let x = btn(1, 6, "<<", prev);
+  x = btn(x, 6, player.paused ? " PLAY " : "PAUSE ", togglePlay, { col: WHITE });
+  x = btn(x, 6, ">>", () => next(false));
+  x = btn(x + 1, 6, "SHUFFLE " + (settings.shuffle ? "ON " : "OFF"), toggleShuffle, { col: settings.shuffle ? LGREEN : LBLUE });
+  btn(x, 6, "REPEAT " + settings.repeat.toUpperCase().padEnd(3), cycleRepeat, { col: settings.repeat !== "off" ? LGREEN : LBLUE });
+
+  x = btn(1, 7, "♥ FAV", () => toggleFav(current), { disabled: !current, col: isFav(current) ? LRED : LBLUE });
+  btn(x, 7, "+ LIST", () => openAddMenu(current), { disabled: !current });
+  text(25, 7, "VOL", LBLUE);
+  for (let i = 0; i < 10; i++) put(29 + i, 7, i < Math.round(settings.vol * 10) ? 160 : 102, i < Math.round(settings.vol * 10) ? WHITE : DGREY);
+  hit(29, 7, 10, 1, x => setVol((x - 29 + 1) / 10));
+}
+
+function drawTabs() {
+  const labels = { browse: "BROWSE", favs: "FAVS " + lib.favs.length, playlists: "LISTS " + lib.playlists.length, recent: "RECENT" };
+  let x = 0;
+  TABS.forEach(v => {
+    const label = " " + labels[v] + " ", n = toCodes(label).length;
+    const active = v === settings.view || (v === "playlists" && isPlaylistView());
+    text(x, 9, label, over(x, 9, n) ? WHITE : LBLUE, active || over(x, 9, n));
+    hit(x, 9, n, 1, () => showView(v));
+    x += n + 1;
+  });
+}
+
+function drawLibrary() {
+  const list = viewList(), n = list.length, s = sel(), top = ui.top[settings.view];
+  const p = playlist(settings.view);
+  const title = settings.view === "browse" ? "BROWSE" : settings.view === "favs" ? "FAVOURITES"
+              : settings.view === "recent" ? "RECENTLY PLAYED" : settings.view === "playlists" ? "PLAYLISTS" : "LIST " + p.name;
+  box(0, 10, 40, 14, LBLUE, title.slice(0, 22), n + (isTrackView() ? " TUNES" : " LISTS"));
+  put(0, 12, 107, LBLUE); put(39, 12, 115, LBLUE); for (let i = 1; i < 39; i++) put(i, 12, 64, LBLUE);
+
+  // row 11: search line or list tools
+  if (isTrackView()) {
+    let x = 1;
+    if (p) x = btn(1, 11, "←", () => showView("playlists"));
+    if (settings.view === "recent") text(x, 11, "THE LAST 30 TUNES YOU PLAYED", LGREY);
+    else {
+      const editing = ui.edit && ui.edit.kind === "search";
+      const q = searches[searchKey()] || "";
+      const fw = 29 - (x + 5);
+      text(x, 11, "FIND:", over(x, 11, fw + 5) ? WHITE : LBLUE);
+      const shown = q || editing ? asCodes(q).slice(-(fw - 1)) : toCodes("PRESS / OR CLICK");
+      text(x + 5, 11, shown, q || editing ? WHITE : DGREY);
+      if (editing && Math.floor(Date.now() / 400) % 2) put(x + 5 + shown.length, 11, 160, WHITE);
+      hit(x, 11, fw + 5, 1, startSearch);
+      ui.kbdField = { x: x + 5, y: 11, w: fw };
+      btn(30, 11, "PLAY ALL", () => playSource(viewSource(), searches[searchKey()]), { disabled: !n });
+    }
+  } else {
+    let x = btn(1, 11, "NEW LIST", newListPrompt);
+    x = btn(x, 11, "EXPORT", exportLibrary);
+    btn(x, 11, "IMPORT", () => $("lib-file").click());
+  }
+
+  // rows 13-21: the list
+  for (let k = 0; k < LIST_H; k++) {
+    const i = top + k, item = list[i], y = LIST_Y + k;
+    if (!item) continue;
+    const isSel = i === s, rev = isSel;
+    if (isTrackView()) {
+      const playing = item === current;
+      put(1, y, playing ? 62 : 32, playing ? WHITE : LBLUE);
+      text(2, y, pad(item.t, 22), playing || isSel ? WHITE : LGREY, rev);
+      put(24, y, rev ? 160 : 32, WHITE);
+      text(25, y, pad(item.a, 12), isSel ? WHITE : LBLUE, rev);
+      put(37, y, rev ? 160 : 32, WHITE);
+      const fav = isFav(item), fx = 38;
+      put(fx, y, 83, over(fx, y, 1) ? WHITE : fav ? LRED : DGREY);
+      hit(2, y, 36, 1, () => rowClick(i));
+      hit(fx, y, 1, 1, () => { ui.sel[settings.view] = i; toggleFav(item); });
+    } else {
+      const playing = settings.queue.source === item.id && !!current;
+      put(1, y, playing ? 62 : 32, WHITE);
+      text(2, y, pad(item.name, 30), isSel ? WHITE : LGREY, rev);
+      text(32, y, rpad(item.tracks.length + "", 7), isSel ? WHITE : LBLUE, rev);
+      hit(2, y, 37, 1, () => rowClick(i));
+    }
+  }
+  if (!n) {
+    const q = (searches[searchKey()] || "").trim();
+    const msg = q ? ["?NO TUNES MATCH " + q.toUpperCase().slice(0, 22)]
+              : settings.view === "favs" ? ["NO FAVOURITES YET.", "PRESS ♥ ON ANY TUNE."]
+              : settings.view === "recent" ? ["NOTHING PLAYED YET."]
+              : settings.view === "playlists" ? ["NO LISTS YET.", "PRESS NEW LIST TO MAKE ONE."]
+              : ["THIS LIST IS EMPTY.", "GO TO BROWSE, FIND TUNES AND", "PRESS + LIST TO ADD THEM HERE."];
+    msg.forEach((m, k) => text(2, LIST_Y + 1 + k, m, LGREY));
+  }
+  // scrollbar in the right border; clicking above or below the thumb pages the list
+  if (n > LIST_H) {
+    const th = Math.max(1, Math.round(LIST_H * LIST_H / n));
+    const ty = LIST_Y + Math.round((LIST_H - th) * top / (n - LIST_H));
+    for (let k = 0; k < LIST_H; k++) put(39, LIST_Y + k, LIST_Y + k >= ty && LIST_Y + k < ty + th ? 160 : 102, LIST_Y + k >= ty && LIST_Y + k < ty + th ? WHITE : DGREY);
+    hit(39, LIST_Y, 1, LIST_H, (x, y) => moveSel(y < ty ? -LIST_H : y >= ty + th ? LIST_H : 0));
+  }
+
+  // row 22: actions for the selected row
+  const item = list[s];
+  let x = 1;
+  if (isTrackView()) {
+    x = btn(x, 22, "PLAY", activate, { disabled: !item });
+    x = btn(x, 22, "♥", () => toggleFav(item), { disabled: !item, col: isFav(item) ? LRED : LBLUE });
+    x = btn(x, 22, "+ LIST", () => openAddMenu(item), { disabled: !item });
+    if (p) {
+      x = btn(x, 22, "UP", () => moveTrack(-1), { disabled: !item || !canReorder() || s === 0 });
+      x = btn(x, 22, "DN", () => moveTrack(1), { disabled: !item || !canReorder() || s === n - 1 });
+      x = btn(x, 22, "DEL", removeTrack, { disabled: !item });
+    }
+  } else {
+    x = btn(x, 22, "OPEN", activate, { disabled: !item });
+    x = btn(x, 22, "PLAY", () => item.tracks.length ? playSource(item.id, "") : setStatus("?" + item.name + " IS EMPTY."), { disabled: !item });
+    x = btn(x, 22, "RENAME", () => renamePrompt(item), { disabled: !item });
+    x = btn(x, 22, "DELETE", () => deleteConfirm(item), { disabled: !item });
+  }
+  if (n) text(x, 22, rpad((s + 1) + "/" + n, 39 - x), DGREY);
+}
+
+function drawStatus() {
+  if (statusLine.msg && Date.now() < statusLine.until) text(0, 24, pad(statusLine.msg, 40), statusLine.col);
+}
+
+function drawOverlay(o) {
+  const { x, y, w, h } = o;
+  // shadow, then the box
+  for (let j = 1; j <= h; j++) put(x + w, y + j, 160, BLACK);
+  for (let i = 1; i <= w; i++) put(x + i, y + h, 160, BLACK);
+  if (o.kind === "prompt") {
+    box(x, y, w, h, WHITE, o.title);
+    text(x + 2, y + 2, "NAME:", LBLUE);
+    const v = asCodes(kbd.value).slice(-(w - 10));
+    text(x + 8, y + 2, v, WHITE);
+    if (Math.floor(Date.now() / 400) % 2) put(x + 8 + v.length, y + 2, 160, WHITE);
+    ui.kbdField = { x: x + 8, y: y + 2, w: w - 10 };
+    hit(x + 1, y + 2, w - 2, 1, () => kbd.focus());
+    let bx = btn(x + 2, y + 4, "  OK  ", () => { const v = kbd.value; const done = ui.edit && ui.edit.onDone; stopEdit(); done && done(v); });
+    btn(bx, y + 4, "CANCEL", o.cancel);
+  } else if (o.kind === "confirm") {
+    box(x, y, w, h, WHITE, "ARE YOU SURE?");
+    o.lines.forEach((l, k) => text(x + 2, y + 1 + k, pad(l, w - 4), WHITE));
+    const by = y + h - 2;
+    let bx = btn(x + 2, by, " YES ", () => { closeOverlay(); o.onYes(); }, { col: LRED });
+    btn(bx, by, " NO ", o.cancel);
+  } else if (o.kind === "menu") {
+    const items = menuItems(o), rows = h - 7;
+    o.sel = Math.max(0, Math.min(items.length - 1, o.sel));
+    if (o.sel < o.top) o.top = o.sel;
+    if (o.sel >= o.top + rows) o.top = o.sel - rows + 1;
+    box(x, y, w, h, WHITE, "ADD TO LIST");
+    text(x + 2, y + 1, marquee(o.track.t, w - 4), WHITE);
+    text(x + 2, y + 2, pad("BY " + o.track.a, w - 4), LGREY);
+    for (let k = 0; k < rows; k++) {
+      const i = o.top + k, item = items[i], ry = y + 4 + k;
+      if (!item) break;
+      const isSel = i === o.sel;
+      if (item.newList) text(x + 2, ry, pad("+ NEW LIST...", w - 4), CYAN, isSel || over(x + 2, ry, w - 4));
+      else {
+        const on = item.tracks.includes(o.track.i), hl = isSel || over(x + 2, ry, w - 4);
+        text(x + 2, ry, pad((on ? "● " : "○ ") + item.name, w - 9), on || hl ? WHITE : LBLUE, hl);
+        text(x + w - 7, ry, rpad(item.tracks.length + "", 5), on || hl ? WHITE : LBLUE, hl);
+      }
+      hit(x + 2, ry, w - 4, 1, () => { o.sel = i; menuActivate(o, item); });
+    }
+    btn(x + 2, y + h - 2, " CLOSE ", o.cancel);
+    text(x + 11, y + h - 2, "RETURN TOGGLES", DGREY);
+  } else if (o.kind === "help") {
+    box(x, y, w, h, WHITE, "HELP");
+    const lines = [
+      ["MOUSE", "CLICK BUTTONS AND ♥"],
+      ["", "DOUBLE-CLICK TUNE = PLAY"],
+      ["CRSR U/D", "SELECT (PGUP/PGDN: PAGE)"],
+      ["RETURN", "PLAY TUNE / OPEN LIST"],
+      ["SPACE", "PLAY / PAUSE"],
+      ["CRSR L/R", "PREVIOUS / NEXT TUNE"],
+      ["/", "FIND (RETURN/ESC ENDS)"],
+      ["F", "FAVOURITE SELECTED TUNE"],
+      ["L", "ADD SELECTED TO A LIST"],
+      ["S / R", "SHUFFLE / REPEAT"],
+      ["+ / -", "VOLUME"],
+      ["1-4 TAB", "SWITCH TABS"],
+      ["N", "NEW LIST (IN LISTS TAB)"],
+      ["DEL", "REMOVE TUNE / DELETE LIST"],
+      ["SHFT U/D", "MOVE TUNE IN A LIST"],
+      ["ESC", "BACK / CLOSE"],
+    ];
+    lines.forEach(([k, v], i) => { text(x + 2, y + 2 + i, k, WHITE); text(x + 11, y + 2 + i, v, LBLUE); });
+    let by = y + 2 + lines.length + 1, bx = x + 2;
+    bx = btn(bx, by, "REMIX.KWED.ORG", () => window.open(RKO, "_blank", "noopener"), { col: CYAN });
+    btn(bx, by, "FONT: STYLE64.ORG", () => window.open("https://style64.org/c64-truetype", "_blank", "noopener"), { col: CYAN });
+    text(x + 2, by + 2, "INDEX BUILT " + BUILT, DGREY);
+    btn(x + w - 9, y + h - 2, " CLOSE ", o.cancel);
+  }
+}
+
+// Keep the hidden input over the field being typed into, so taps and the phone keyboard line up.
+function placeKbd() {
+  const f = ui.edit && ui.kbdField;
+  Object.assign(kbd.style, f ? { left: f.x * px + "px", top: f.y * px + "px", width: f.w * px + "px", height: px + "px" }
+                             : { left: "0px", top: "0px", width: "1px", height: "1px" });
+}
+
+/* ======================================================================================
+   Input
+   ====================================================================================== */
+function cellAt(e) {
+  const r = $("screen").getBoundingClientRect();
+  return { x: Math.floor((e.clientX - r.left) / px), y: Math.floor((e.clientY - r.top) / px) };
+}
+function rowClick(i) {
+  const now = Date.now(), v = settings.view;
+  const dbl = ui.lastClick.i === i && ui.lastClick.v === v && now - ui.lastClick.t < 450;
+  ui.sel[v] = i; ui.lastClick = { t: now, i, v };
+  if (dbl) activate(); else render();
+}
+
+$("screen").addEventListener("pointermove", e => {
+  const c = cellAt(e);
+  if (c.x !== mouse.x || c.y !== mouse.y) { mouse = c; render(); }
+});
+$("screen").addEventListener("mousedown", e => e.preventDefault());
+$("screen").addEventListener("pointerleave", () => { mouse = { x: -1, y: -1 }; render(); });
+$("screen").addEventListener("click", e => {
+  const c = cellAt(e); mouse = c;
+  const o = ui.overlay;
+  if (o && (c.x < o.x || c.x >= o.x + o.w || c.y < o.y || c.y >= o.y + o.h)) return o.cancel();
+  const h = [...hits].reverse().find(h => c.x >= h.x && c.x < h.x + h.w && c.y >= h.y && c.y < h.y + h.h);
+  if (ui.edit && ui.edit.kind === "search" && !(h && h.fn === startSearch)) stopEdit();
+  if (h) h.fn(c.x, c.y); else render();
+});
+$("screen").addEventListener("wheel", e => {
+  e.preventDefault();
+  const d = Math.sign(e.deltaY);
+  if (ui.overlay && ui.overlay.kind === "menu") { ui.overlay.sel += d; return render(); }
+  if (!ui.overlay) moveSel(d * 3);
+}, { passive: false });
+// Touch: drag up/down over the list to scroll it.
+let touchY = null;
+$("screen").addEventListener("touchstart", e => { touchY = e.touches[0].clientY; }, { passive: true });
+$("screen").addEventListener("touchmove", e => {
+  if (touchY === null || ui.overlay) return;
+  const dy = touchY - e.touches[0].clientY, step = px * 1.2;
+  if (Math.abs(dy) >= step) { moveSel(Math.trunc(dy / step)); touchY = e.touches[0].clientY; }
+}, { passive: true });
+
+document.addEventListener("keydown", e => {
+  if (e.target === kbd || e.metaKey || e.ctrlKey || e.altKey) return;
+  const o = ui.overlay, k = e.key;
+  const handled = () => { e.preventDefault(); };
+  if (o) {
+    if (k === "Escape") return handled(), o.cancel();
+    if (o.kind === "confirm") { if (k === "y" || k === "Y" || k === "Enter") { handled(); closeOverlay(); o.onYes(); } else if (k === "n" || k === "N") { handled(); o.cancel(); } return; }
+    if (o.kind === "menu") {
+      const items = menuItems(o);
+      if (k === "ArrowDown") { handled(); o.sel++; render(); }
+      else if (k === "ArrowUp") { handled(); o.sel--; render(); }
+      else if (k === "Enter" || k === " ") { handled(); menuActivate(o, items[Math.max(0, Math.min(items.length - 1, o.sel))]); }
       return;
     }
-    case "up": case "down": case "remove": {
-      const n = pl.tracks.indexOf(r.i);
-      if (act === "remove") pl.tracks.splice(n, 1);
-      else {
-        const m = act === "up" ? n - 1 : n + 1;
-        if (m < 0 || m >= pl.tracks.length) return;
-        [pl.tracks[n], pl.tracks[m]] = [pl.tracks[m], pl.tracks[n]];
-      }
-      saveLib(); return libraryChanged();
-    }
+    if (o.kind === "help" && (k === "Enter" || k === "?")) { handled(); o.cancel(); }
+    return;
   }
-};
-
-$("r-play").onclick = () => {
-  if (!current || (player.ended && pos >= order.length - 1)) {
-    return settings.view === "playlists" || settings.view === "recent" ? playSource(settings.queue.source, settings.queue.filter)
-                                                                       : playSource(viewSource(), searches[searchKey()]);
+  const item = selected(), p = playlist(settings.view);
+  switch (k) {
+    case "ArrowDown": handled(); return e.shiftKey ? moveTrack(1) : moveSel(1);
+    case "ArrowUp": handled(); return e.shiftKey ? moveTrack(-1) : moveSel(-1);
+    case "PageDown": handled(); return moveSel(LIST_H);
+    case "PageUp": handled(); return moveSel(-LIST_H);
+    case "Home": handled(); ui.sel[settings.view] = 0; return render();
+    case "End": handled(); ui.sel[settings.view] = viewList().length - 1; return render();
+    case "Enter": handled(); return activate();
+    case " ": handled(); return togglePlay();
+    case "ArrowRight": handled(); return next(false);
+    case "ArrowLeft": handled(); return prev();
+    case "/": handled(); return startSearch();
+    case "Tab": handled(); return nextTab(e.shiftKey ? -1 : 1);
+    case "Escape":
+      handled();
+      if (p) return showView("playlists");
+      if (searches[searchKey()]) { searches[searchKey()] = ""; return render(); }
+      return;
+    case "?": handled(); return openHelp();
+    case "+": case "=": handled(); return setVol(settings.vol + 0.1);
+    case "-": handled(); return setVol(settings.vol - 0.1);
+    case "Delete": case "Backspace":
+      handled();
+      if (p) return removeTrack();
+      if (settings.view === "playlists" && item) return deleteConfirm(item);
+      return;
   }
-  player.paused ? player.play() : player.pause();
-};
-$("r-next").onclick = () => next(false);
-$("r-prev").onclick = prev;
-$("r-shuffle").onclick = () => { settings.shuffle = !settings.shuffle; saveSettings(); renderModes(); rebuildOrder(); };
-$("r-repeat").onclick = () => {
-  settings.repeat = { off: "all", all: "one", one: "off" }[settings.repeat];
-  saveSettings(); renderModes(); warmNext();
-};
-$("r-fav").onclick = () => current && toggleFav(current);
-$("r-add").onclick = e => current && (menuTrack === current && !$("add-menu").hidden ? closeAddMenu() : openAddMenu(current, e.currentTarget));
+  switch (k.toLowerCase()) {
+    case "1": case "2": case "3": case "4": handled(); return showView(TABS[Number(k) - 1]);
+    case "f": if (isTrackView()) { handled(); toggleFav(item); } return;
+    case "l": if (isTrackView()) { handled(); openAddMenu(item); } return;
+    case "s": handled(); return toggleShuffle();
+    case "r": handled(); return cycleRepeat();
+    case "n": if (settings.view === "playlists") { handled(); newListPrompt(); } return;
+  }
+});
 
-player.onplay = () => { $("r-play").textContent = "⏸ Pause"; setStatus(""); };
-player.onpause = () => { $("r-play").textContent = "▶ Play"; };
+function newListPrompt() {
+  openPrompt("NEW LIST", "", name => { const p = createPlaylist(name); if (p) { ui.sel.playlists = lib.playlists.length - 1; setStatus("CREATED " + p.name, LGREEN); } });
+}
+function renamePrompt(p) {
+  openPrompt("RENAME LIST", p.name, name => { p.name = name.slice(0, 40); saveLib(); libraryChanged(); });
+}
+function deleteConfirm(p) {
+  openConfirm(["DELETE LIST", p.name.toUpperCase().slice(0, 28), "(" + p.tracks.length + " TUNES)?"], () => {
+    lib.playlists.splice(lib.playlists.indexOf(p), 1); saveLib(); libraryChanged(); setStatus("DELETED " + p.name, LGREEN);
+  });
+}
+
+/* ---------- audio events ---------- */
 player.onplaying = () => {
   failures = 0;
   if (uncounted) { countPlay(uncounted); uncounted = null; }
 };
+player.onplay = player.onpause = () => render();
 player.onended = () => next(true);
 player.onerror = () => {
   // Skip broken files, but stop after several consecutive failures (likely offline).
-  if (++failures > 5) { setStatus("Several tracks failed to load. Check your connection, then press Play."); return; }
-  setStatus("Track unavailable, skipping…");
+  if (++failures > 5) return setStatus("?LOAD ERROR. CHECK CONNECTION.");
+  setStatus("?FILE NOT FOUND ERROR. SKIPPING.");
   next(false);
 };
-player.ontimeupdate = () => {
-  $("r-pos").textContent = fmt(player.currentTime);
-  $("r-dur").textContent = fmt(player.duration);
-  $("r-progress").firstElementChild.style.width = (player.duration ? player.currentTime / player.duration * 100 : 0) + "%";
-};
-$("r-progress").onclick = e => {
-  if (!player.duration) return;
-  const b = e.currentTarget.getBoundingClientRect();
-  player.currentTime = (e.clientX - b.left) / b.width * player.duration;
-};
-
-function setVol(v) { player.volume = preload.volume = v; $("r-vol").value = v; settings.vol = v; saveSettings(); }
-$("r-vol").oninput = e => setVol(Number(e.target.value));
 
 /* ---------- export / import ---------- */
 function exportLibrary() {
   const blob = new Blob([JSON.stringify({ app: "c64-radio", version: 1, ...lib }, null, 2)], { type: "application/json" });
-  const a = el("a", { href: URL.createObjectURL(blob), download: "c64-radio-library.json" });
+  const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: "c64-radio-library.json" });
   a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  setStatus("SAVING \"C64-RADIO-LIBRARY.JSON\"", LGREEN);
 }
 $("lib-file").onchange = async e => {
   const file = e.target.files[0]; e.target.value = "";
@@ -560,14 +935,14 @@ $("lib-file").onchange = async e => {
     knownIds(data.favs).forEach(i => { if (!lib.favs.includes(i)) { lib.favs.push(i); favs++; } });
     (Array.isArray(data.playlists) ? data.playlists : []).forEach(p => {
       if (!p || typeof p.name !== "string") return;
-      let name = p.name.slice(0, 80);
-      while (lib.playlists.some(x => x.name === name)) name += " (imported)";
+      let name = p.name.slice(0, 40);
+      while (lib.playlists.some(x => x.name === name)) name += " (IMPORTED)";
       lib.playlists.push({ id: newId(), name, tracks: knownIds(p.tracks) }); lists++;
     });
     saveLib(); libraryChanged();
-    setStatus("Imported " + favs + " new favourites and " + lists + " playlists.");
+    setStatus("LOADED " + favs + " FAVS AND " + lists + " LISTS.", LGREEN);
   } catch (err) {
-    setStatus("Import failed: " + err.message);
+    setStatus("?LOAD ERROR: NOT A LIBRARY FILE.");
   }
 };
 
@@ -576,14 +951,17 @@ if ("mediaSession" in navigator) {
   navigator.mediaSession.setActionHandler("previoustrack", prev);
 }
 
-// Settings saved by the previous version of this page used `source`/`filter`/`target` keys.
+// Settings saved by an earlier version of this page used `source`/`filter`/`target` keys.
 if (!settings.queue || typeof settings.queue.source !== "string") settings.queue = { source: "all", filter: "" };
 delete settings.source; delete settings.filter; delete settings.target;
 if (!playlist(settings.queue.source) && settings.queue.source !== "favs") settings.queue.source = "all";
+if (!TABS.includes(settings.view) && !playlist(settings.view)) settings.view = "browse";
 
-$("f-count").textContent = REMIXES.length;
-setVol(settings.vol);
-renderModes(); renderView();
+player.volume = preload.volume = settings.vol;
+addEventListener("resize", fit);
+setInterval(render, 100);              // cursor blink, scrolling titles and the progress bar
+fit();
+loadCharset();
 </script>
 </body>
 </html>
