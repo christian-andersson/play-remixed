@@ -1,0 +1,589 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>C64 Radio</title>
+<style>
+  :root {
+    --bg: #1b1a3a; --panel: #26245a; --ink: #e8e6ff; --muted: #a9a6d8;
+    --accent: #8f8cff; --accent-ink: #11102a; --line: #3a3878; --warn: #ffb86b; --fav: #ff7aa8;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.45 ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  main { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 22px; letter-spacing: .08em; margin: 0 0 16px; }
+  button, input { font: inherit; color: var(--ink); background: var(--panel);
+    border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; }
+  button { cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button:disabled { opacity: .4; cursor: default; border-color: var(--line); }
+  button.primary, button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; margin-bottom: 16px; }
+  .now { min-height: 72px; }
+  .title { font-size: 20px; font-weight: 700; word-break: break-word; }
+  .meta { color: var(--muted); margin-top: 4px; }
+  .meta a { color: var(--accent); }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; align-items: center; }
+  .controls.first { margin-top: 0; }
+  .controls.last { margin-bottom: 0; }
+  .controls input[type=search], .controls input[type=text] { flex: 1; min-width: 180px; }
+  .controls input[type=range] { flex: 1; min-width: 120px; padding: 0; }
+  .spacer { flex: 1; }
+  .progress { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; cursor: pointer; }
+  .progress > div { height: 100%; width: 0; background: var(--accent); }
+  .time { display: flex; justify-content: space-between; color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .status { color: var(--warn); font-size: 13px; min-height: 1.4em; }
+  .fav { color: var(--fav); }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+  .tabs button { flex: 1; }
+  .rows { list-style: none; margin: 0; padding: 0; }
+  .rows li { display: flex; align-items: center; gap: 6px; padding: 4px 6px; border-radius: 6px; }
+  .rows li.current { background: var(--line); }
+  .rows .info { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rows .info span { color: var(--muted); }
+  .rows button { padding: 2px 8px; font-size: 13px; }
+  .rows input { flex: 1; padding: 2px 8px; }
+  .count { color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+  .crumb { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .crumb .name { font-weight: 700; font-size: 17px; flex: 1; word-break: break-word; }
+  .menu { position: fixed; z-index: 10; width: 280px; max-height: 60vh; overflow: auto; background: var(--panel);
+    border: 1px solid var(--accent); border-radius: 8px; padding: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+  .menu .head { color: var(--muted); font-size: 13px; margin-bottom: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .menu label { display: flex; gap: 8px; align-items: center; padding: 4px 2px; cursor: pointer; }
+  .menu form { display: flex; gap: 6px; margin-top: 8px; }
+  .menu form input { flex: 1; min-width: 0; padding: 4px 8px; }
+  .menu form button { padding: 4px 10px; }
+  footer { color: var(--muted); font-size: 12px; }
+  footer a { color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1>▶ C64 RADIO</h1>
+
+  <!-- Now playing and transport controls -->
+  <section class="panel">
+    <div class="now">
+      <div class="title" id="r-title">Press play</div>
+      <div class="meta" id="r-meta"></div>
+      <div class="meta" id="r-from"></div>
+    </div>
+    <div class="progress" id="r-progress"><div></div></div>
+    <div class="time"><span id="r-pos">0:00</span><span id="r-dur">0:00</span></div>
+    <div class="controls">
+      <button id="r-prev" title="Previous">⏮</button>
+      <button id="r-play" class="primary" title="Play / pause">▶ Play</button>
+      <button id="r-next" title="Next">⏭</button>
+      <button id="r-shuffle" title="Shuffle">🔀 Shuffle</button>
+      <button id="r-repeat" title="Repeat: off → all → one"></button>
+      <input id="r-vol" type="range" min="0" max="1" step="0.01" value="0.8" title="Volume">
+    </div>
+    <div class="controls last">
+      <button id="r-fav" title="Favourite the current track" disabled>♡ Favourite</button>
+      <button id="r-add" title="Add the current track to a playlist" disabled>+ Playlist</button>
+      <span class="status" id="r-status"></span>
+    </div>
+  </section>
+
+  <!-- Library: browse, favourites, playlist manager, recent -->
+  <section class="panel">
+    <div class="tabs" id="tabs">
+      <button data-view="browse">Browse</button>
+      <button data-view="favs">♥ Favourites</button>
+      <button data-view="playlists">▤ Playlists</button>
+      <button data-view="recent">Recent</button>
+    </div>
+    <div id="view"></div>
+  </section>
+
+  <footer>
+    Music from <a href="https://remix.kwed.org/" target="_blank" rel="noopener">Remix64 / RKO</a>.
+    Index of <span id="f-count"></span> remixes built __BUILT__. Favourites and playlists are stored in this browser;
+    use Export under Playlists to back them up.
+  </footer>
+</main>
+
+<div class="menu" id="add-menu" hidden></div>
+<input id="lib-file" type="file" accept=".json,application/json" hidden>
+
+<script>
+// Song list in the compact form written by build.py: [id step, title, arranger, composer, file?]
+const REMIXES = (({ arrangers, composers, songs }) => {
+  let id = 0;
+  return songs.map(([step, t, a, c, f]) => {
+    id += step;
+    return { i: id, t, a: arrangers[a], c: composers[c], f: f || arrangers[a] + " - " + t + ".mp3" };
+  });
+})(__REMIXES__);
+const BY_ID = new Map(REMIXES.map(r => [r.i, r]));
+const NEWEST_FIRST = REMIXES.slice().reverse();
+const RKO = "https://remix.kwed.org";
+const PAGE_SIZE = 200;
+const $ = id => document.getElementById(id);
+const fmt = s => !isFinite(s) ? "0:00" : Math.floor(s / 60) + ":" + String(Math.floor(s % 60)).padStart(2, "0");
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+};
+const setStatus = msg => { $("r-status").textContent = msg || ""; };
+// Keeps only ids that exist in the index, without duplicates.
+const knownIds = list => [...new Set((Array.isArray(list) ? list : []).filter(i => BY_ID.has(i)))];
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+function el(tag, props = {}, ...children) {
+  const e = Object.assign(document.createElement(tag), props);
+  e.append(...children);
+  return e;
+}
+function button(label, act, title, cls) {
+  const b = el("button", { textContent: label, title });
+  b.dataset.act = act;
+  if (cls) b.className = cls;
+  return b;
+}
+
+/* ---------- settings ---------- */
+// view: what the library panel shows ("browse", "favs", "playlists", "recent" or a playlist id).
+// queue: what the player plays from; it only changes when the user presses play somewhere.
+const settings = Object.assign({ shuffle: true, repeat: "all", vol: 0.8, view: "browse", queue: { source: "all", filter: "" } },
+                               store.get("settings", {}));
+const saveSettings = () => store.set("settings", settings);
+const searches = { browse: "", favs: "", playlist: "" };
+
+/* ---------- library: favourites and playlists, stored by remix id ---------- */
+const lib = (() => {
+  const saved = store.get("library", {});
+  return {
+    favs: knownIds(saved.favs),
+    playlists: (Array.isArray(saved.playlists) ? saved.playlists : [])
+      .filter(p => p && typeof p.name === "string")
+      .map(p => ({ id: String(p.id || newId()), name: p.name.slice(0, 80), tracks: knownIds(p.tracks) }))
+  };
+})();
+const saveLib = () => store.set("library", lib);
+const isFav = r => lib.favs.includes(r.i);
+const playlist = id => lib.playlists.find(p => p.id === id);
+
+function toggleFav(r) {
+  const n = lib.favs.indexOf(r.i);
+  n >= 0 ? lib.favs.splice(n, 1) : lib.favs.push(r.i);
+  saveLib(); libraryChanged();
+}
+
+function createPlaylist(name) {
+  name = (name || "").trim().slice(0, 80);
+  if (!name) return null;
+  const p = { id: newId(), name, tracks: [] };
+  lib.playlists.push(p); saveLib(); libraryChanged();
+  return p;
+}
+
+function togglePlaylistTrack(p, r) {
+  const n = p.tracks.indexOf(r.i);
+  n >= 0 ? p.tracks.splice(n, 1) : p.tracks.push(r.i);
+  saveLib(); libraryChanged();
+  setStatus((n >= 0 ? "Removed from “" : "Added to “") + p.name + "”.");
+}
+
+/* ---------- queue ---------- */
+const player = new Audio();
+const preload = new Audio();          // warms up the next track so transitions are near-instant
+preload.preload = "auto";
+let order = [], pos = -1, current = null, uncounted = null, failures = 0, shown = PAGE_SIZE, recent = [];
+
+const fileUrl = r => RKO + "/files/RKOfiles/" + encodeURIComponent(r.f);
+
+// Credit the play on RKO's download counter: hit download.php once, without following its
+// redirect, so the MP3 itself is not transferred a second time.
+function countPlay(r) {
+  fetch(RKO + "/download.php/" + r.i + "/" + encodeURIComponent(r.f),
+        { mode: "no-cors", redirect: "manual", cache: "no-store" }).catch(() => {});
+}
+
+function tracksFor(source, filter) {
+  let list = source === "all" ? NEWEST_FIRST
+           : source === "favs" ? lib.favs.map(i => BY_ID.get(i))
+           : source === "recent" ? recent
+           : (playlist(source) || { tracks: [] }).tracks.map(i => BY_ID.get(i));
+  const q = (filter || "").trim().toLowerCase();
+  return q ? list.filter(r => (r.t + " " + r.a + " " + r.c).toLowerCase().includes(q)) : list;
+}
+
+function sourceName(source) {
+  return source === "all" ? "All remixes" : source === "favs" ? "♥ Favourites"
+       : source === "recent" ? "Recently played" : "▤ " + ((playlist(source) || {}).name || "playlist");
+}
+
+function shuffled(list) {
+  const a = list.slice();
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+
+// Rebuilds the play order from the queue source. With shuffle on, `first` (usually the playing
+// track) goes to the front so the shuffled rest follows it.
+function rebuildOrder(first = current) {
+  const list = tracksFor(settings.queue.source, settings.queue.filter);
+  if (settings.shuffle) {
+    order = shuffled(list.filter(r => r !== first));
+    if (first && list.includes(first)) order.unshift(first);
+  } else {
+    order = list.slice();
+  }
+  pos = current ? order.indexOf(current) : -1;
+  renderFrom(); warmNext();
+}
+
+// Points the player at a new source and starts it, optionally at a given track.
+function playSource(source, filter, track) {
+  settings.queue = { source, filter: filter || "" }; saveSettings();
+  if (source === "recent") settings.queue.source = "all";   // recent is a moving list; play it as a one-off pick
+  if (track) { rebuildOrder(track); pos = order.indexOf(track); return playTrack(track); }
+  current = null; rebuildOrder(null); next();
+}
+
+function peekNext() {
+  if (settings.repeat === "one") return null;
+  if (pos + 1 < order.length) return order[pos + 1];
+  return settings.repeat === "all" && !settings.shuffle ? order[0] : null;
+}
+
+function warmNext() {
+  const n = peekNext();
+  if (n && n !== current) preload.src = fileUrl(n);
+}
+
+function playTrack(r) {
+  current = r;
+  player.src = fileUrl(r);
+  uncounted = r;
+  player.play().catch(e => setStatus("Playback blocked: " + e.message + " — press Play."));
+  document.title = r.t + " — " + r.a;
+  if ("mediaSession" in navigator) {
+    navigator.mediaSession.metadata = new MediaMetadata({ title: r.t, artist: r.a, album: "Remix64 · " + (r.c || "C64") });
+  }
+  recent = [r, ...recent.filter(x => x !== r)].slice(0, 30);
+  renderNow(); renderView();
+  warmNext();
+}
+
+// auto = true when the previous track ended on its own; repeat-one only applies then.
+function next(auto = false) {
+  if (auto && settings.repeat === "one" && current) { uncounted = current; player.currentTime = 0; player.play(); return; }
+  if (!order.length) { setStatus("Nothing to play: the list is empty."); return; }
+  if (pos + 1 < order.length) {
+    pos++;
+  } else if (settings.repeat === "all") {
+    if (settings.shuffle) {   // fresh shuffle each lap, without repeating the last track straight away
+      order = shuffled(order);
+      if (order.length > 1 && order[0] === current) order.push(order.shift());
+    }
+    pos = 0;
+  } else {
+    player.pause();
+    setStatus("End of list.");
+    return;
+  }
+  playTrack(order[pos]);
+}
+
+function prev() {
+  if (player.currentTime > 5 || pos <= 0) { player.currentTime = 0; return; }
+  pos--; playTrack(order[pos]);
+}
+
+/* ---------- player rendering ---------- */
+function renderNow() {
+  const r = current;
+  $("r-fav").disabled = $("r-add").disabled = !r;
+  if (!r) return;
+  $("r-title").textContent = r.t;
+  $("r-meta").replaceChildren(
+    "Remix by " + r.a + (r.c ? " · original by " + r.c : "") + " · ",
+    el("a", { href: RKO + "/remix/" + r.i, target: "_blank", rel: "noopener", textContent: "#" + r.i })
+  );
+  $("r-fav").textContent = isFav(r) ? "♥ Favourite" : "♡ Favourite";
+  $("r-fav").classList.toggle("fav", isFav(r));
+}
+
+function renderFrom() {
+  const q = settings.queue;
+  $("r-from").textContent = current || order.length
+    ? "Playing from " + sourceName(q.source) + (q.filter ? " matching “" + q.filter + "”" : "") + " · " + order.length + " tracks"
+    : "";
+}
+
+function renderModes() {
+  $("r-shuffle").classList.toggle("on", settings.shuffle);
+  $("r-repeat").textContent = { off: "🔁 Repeat: off", all: "🔁 Repeat: all", one: "🔂 Repeat: one" }[settings.repeat];
+  $("r-repeat").classList.toggle("on", settings.repeat !== "off");
+}
+
+/* ---------- library views ---------- */
+const isPlaylistView = () => !!playlist(settings.view);
+const searchKey = () => isPlaylistView() ? "playlist" : settings.view;
+const viewSource = () => settings.view === "browse" ? "all" : settings.view;
+
+function trackRow(r, { reorder = false } = {}) {
+  const li = el("li");
+  li.dataset.id = r.i;
+  li.classList.toggle("current", r === current);
+  const fav = button(isFav(r) ? "♥" : "♡", "fav", "Favourite", isFav(r) ? "fav" : "");
+  li.append(button("▶", "play", "Play"),
+            el("div", { className: "info" }, r.t, el("span", { textContent: " — " + r.a + (r.c ? " · " + r.c : "") })),
+            fav, button("+", "add", "Add to playlist"));
+  if (reorder) li.append(button("↑", "up", "Move up"), button("↓", "down", "Move down"), button("✕", "remove", "Remove from this playlist"));
+  return li;
+}
+
+function searchBox() {
+  const input = el("input", { type: "search", value: searches[searchKey()], id: "search",
+                              placeholder: "Search title, remixer or composer (e.g. Hubbard)" });
+  let t;
+  input.oninput = () => { clearTimeout(t); t = setTimeout(() => { searches[searchKey()] = input.value; shown = PAGE_SIZE; renderList(); }, 200); };
+  return el("div", { className: "controls first" }, input,
+            button("▶ Play these", "play-all", "Play the tracks shown, from the top or shuffled"));
+}
+
+function renderTabs() {
+  document.querySelectorAll("#tabs button").forEach(b => {
+    const v = b.dataset.view;
+    b.classList.toggle("on", v === settings.view || (v === "playlists" && isPlaylistView()));
+    if (v === "favs") b.textContent = "♥ Favourites (" + lib.favs.length + ")";
+    if (v === "playlists") b.textContent = "▤ Playlists (" + lib.playlists.length + ")";
+  });
+}
+
+function renderView() {
+  if (settings.view !== "browse" && settings.view !== "favs" && settings.view !== "playlists"
+      && settings.view !== "recent" && !isPlaylistView()) settings.view = "browse";
+  renderTabs();
+  const v = $("view");
+  const focused = document.activeElement && document.activeElement.id;
+  v.replaceChildren();
+  if (settings.view === "playlists") return renderManager(v);
+  if (isPlaylistView()) {
+    const p = playlist(settings.view);
+    v.append(el("div", { className: "crumb" },
+      button("← Playlists", "back", "All playlists"), el("span", { className: "name", textContent: p.name })));
+  }
+  if (settings.view !== "recent") v.append(searchBox());
+  v.append(el("div", { className: "count", id: "count" }), el("ul", { className: "rows", id: "list" }),
+           el("div", { className: "controls last" }, button("Show more", "more", "Show more tracks")));
+  renderList();
+  if (focused === "search") { const s = $("search"); s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
+}
+
+function renderList() {
+  const list = tracksFor(viewSource(), searches[searchKey()]);
+  const reorder = isPlaylistView() && !searches.playlist.trim();
+  $("list").replaceChildren(...list.slice(0, shown).map(r => trackRow(r, { reorder })));
+  const q = (searches[searchKey()] || "").trim();
+  const empty = q ? "No tracks match “" + q + "”."
+              : settings.view === "favs" ? "No favourites yet. Press ♡ on any track."
+              : settings.view === "recent" ? "Nothing played yet."
+              : "This playlist is empty. Go to Browse, search for songs and press + to add them here.";
+  $("count").textContent = list.length ? list.length + " tracks" + (list.length > shown ? ", showing " + shown : "") : empty;
+  document.querySelector('[data-act="more"]').hidden = list.length <= shown;
+  const playAll = document.querySelector('[data-act="play-all"]');
+  if (playAll) playAll.disabled = !list.length;
+}
+
+function renderManager(v) {
+  const name = el("input", { type: "text", id: "pl-name", placeholder: "New playlist name", maxLength: 80 });
+  const form = el("form", { className: "controls first" }, name, el("button", { type: "submit", className: "primary", textContent: "+ Create playlist" }));
+  form.onsubmit = e => { e.preventDefault(); const p = createPlaylist(name.value); if (p) setStatus("Created “" + p.name + "”."); };
+  const rows = lib.playlists.map(p => {
+    const li = el("li");
+    li.dataset.pl = p.id;
+    li.classList.toggle("current", settings.queue.source === p.id && !!current);
+    li.append(button("▶", "pl-play", "Play this playlist"),
+              el("div", { className: "info" }, p.name, el("span", { textContent: " — " + p.tracks.length + " tracks" })),
+              button("Open", "pl-open", "Show and edit tracks"), button("Rename", "pl-rename", "Rename"),
+              button("Delete", "pl-delete", "Delete playlist"));
+    return li;
+  });
+  v.append(form,
+    el("div", { className: "count", textContent: lib.playlists.length ? "" : "No playlists yet. Create one above, then use + on any track to add it." }),
+    el("ul", { className: "rows", id: "pl-list" }, ...rows),
+    el("div", { className: "controls last" }, el("span", { className: "spacer" }),
+      button("Export library", "export", "Download favourites and playlists as JSON"),
+      button("Import library", "import", "Merge favourites and playlists from a JSON export")));
+}
+
+// After favourites or playlists change: keep playing, but refresh the order if it came from them.
+function libraryChanged() {
+  if (settings.queue.source !== "all" && settings.queue.source !== "favs" && !playlist(settings.queue.source)) settings.queue = { source: "all", filter: "" };
+  renderNow(); renderView(); renderAddMenu();
+  if (settings.queue.source !== "all") rebuildOrder();
+  saveSettings();
+}
+
+function showView(view) {
+  settings.view = view; shown = PAGE_SIZE; saveSettings(); closeAddMenu(); renderView();
+}
+
+/* ---------- "add to playlist" menu ---------- */
+let menuTrack = null;
+function openAddMenu(r, anchor) {
+  menuTrack = r;
+  const m = $("add-menu"); m.hidden = false;
+  renderAddMenu();
+  const b = anchor.getBoundingClientRect();
+  const left = Math.max(8, Math.min(b.right - m.offsetWidth, innerWidth - m.offsetWidth - 8));
+  const top = b.bottom + 6 + m.offsetHeight < innerHeight ? b.bottom + 6 : Math.max(8, b.top - m.offsetHeight - 6);
+  m.style.left = left + "px"; m.style.top = top + "px";
+  if (!lib.playlists.length) m.querySelector("input[type=text]").focus();
+}
+function closeAddMenu() { $("add-menu").hidden = true; menuTrack = null; }
+function renderAddMenu() {
+  const m = $("add-menu"), r = menuTrack;
+  if (m.hidden || !r) return;
+  const boxes = lib.playlists.map(p => {
+    const cb = el("input", { type: "checkbox", checked: p.tracks.includes(r.i) });
+    cb.onchange = () => togglePlaylistTrack(p, r);
+    return el("label", {}, cb, p.name + " (" + p.tracks.length + ")");
+  });
+  const name = el("input", { type: "text", placeholder: "New playlist…", maxLength: 80 });
+  const form = el("form", {}, name, el("button", { type: "submit", textContent: "Create" }));
+  form.onsubmit = e => { e.preventDefault(); const p = createPlaylist(name.value); if (p) togglePlaylistTrack(p, r); };
+  m.replaceChildren(el("div", { className: "head", textContent: "Add “" + r.t + "” to:" }), ...boxes, form);
+}
+document.addEventListener("click", e => {
+  const m = $("add-menu");
+  if (!m.hidden && !m.contains(e.target) && !e.target.closest('[data-act="add"], #r-add')) closeAddMenu();
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeAddMenu(); });
+
+/* ---------- events ---------- */
+$("tabs").onclick = e => { const b = e.target.closest("button"); if (b) showView(b.dataset.view); };
+
+$("view").onclick = e => {
+  const btn = e.target.closest("button[data-act]"); if (!btn) return;
+  const act = btn.dataset.act, li = btn.closest("li");
+  const r = li && li.dataset.id ? BY_ID.get(Number(li.dataset.id)) : null;
+  const pl = li && li.dataset.pl ? playlist(li.dataset.pl) : playlist(settings.view);
+  switch (act) {
+    case "play": return playSource(viewSource(), searches[searchKey()], r);
+    case "play-all": return playSource(viewSource(), searches[searchKey()]);
+    case "fav": return toggleFav(r);
+    case "add": return menuTrack === r && !$("add-menu").hidden ? closeAddMenu() : openAddMenu(r, btn);
+    case "more": shown += PAGE_SIZE; return renderList();
+    case "back": return showView("playlists");
+    case "export": return exportLibrary();
+    case "import": return $("lib-file").click();
+    case "pl-open": return showView(pl.id);
+    case "pl-play":
+      if (!pl.tracks.length) return setStatus("“" + pl.name + "” is empty.");
+      return playSource(pl.id, "");
+    case "pl-delete":
+      if (!confirm("Delete playlist “" + pl.name + "” (" + pl.tracks.length + " tracks)?")) return;
+      lib.playlists.splice(lib.playlists.indexOf(pl), 1); saveLib(); return libraryChanged();
+    case "pl-rename": {
+      const input = el("input", { type: "text", value: pl.name, maxLength: 80 });
+      const save = () => { const n = input.value.trim(); if (n && n !== pl.name) { pl.name = n; saveLib(); } libraryChanged(); };
+      input.onkeydown = ev => { if (ev.key === "Enter") input.blur(); if (ev.key === "Escape") { input.value = pl.name; input.blur(); } };
+      input.onblur = save;
+      li.querySelector(".info").replaceWith(input); input.focus(); input.select();
+      return;
+    }
+    case "up": case "down": case "remove": {
+      const n = pl.tracks.indexOf(r.i);
+      if (act === "remove") pl.tracks.splice(n, 1);
+      else {
+        const m = act === "up" ? n - 1 : n + 1;
+        if (m < 0 || m >= pl.tracks.length) return;
+        [pl.tracks[n], pl.tracks[m]] = [pl.tracks[m], pl.tracks[n]];
+      }
+      saveLib(); return libraryChanged();
+    }
+  }
+};
+
+$("r-play").onclick = () => {
+  if (!current || (player.ended && pos >= order.length - 1)) {
+    return settings.view === "playlists" || settings.view === "recent" ? playSource(settings.queue.source, settings.queue.filter)
+                                                                       : playSource(viewSource(), searches[searchKey()]);
+  }
+  player.paused ? player.play() : player.pause();
+};
+$("r-next").onclick = () => next(false);
+$("r-prev").onclick = prev;
+$("r-shuffle").onclick = () => { settings.shuffle = !settings.shuffle; saveSettings(); renderModes(); rebuildOrder(); };
+$("r-repeat").onclick = () => {
+  settings.repeat = { off: "all", all: "one", one: "off" }[settings.repeat];
+  saveSettings(); renderModes(); warmNext();
+};
+$("r-fav").onclick = () => current && toggleFav(current);
+$("r-add").onclick = e => current && (menuTrack === current && !$("add-menu").hidden ? closeAddMenu() : openAddMenu(current, e.currentTarget));
+
+player.onplay = () => { $("r-play").textContent = "⏸ Pause"; setStatus(""); };
+player.onpause = () => { $("r-play").textContent = "▶ Play"; };
+player.onplaying = () => {
+  failures = 0;
+  if (uncounted) { countPlay(uncounted); uncounted = null; }
+};
+player.onended = () => next(true);
+player.onerror = () => {
+  // Skip broken files, but stop after several consecutive failures (likely offline).
+  if (++failures > 5) { setStatus("Several tracks failed to load. Check your connection, then press Play."); return; }
+  setStatus("Track unavailable, skipping…");
+  next(false);
+};
+player.ontimeupdate = () => {
+  $("r-pos").textContent = fmt(player.currentTime);
+  $("r-dur").textContent = fmt(player.duration);
+  $("r-progress").firstElementChild.style.width = (player.duration ? player.currentTime / player.duration * 100 : 0) + "%";
+};
+$("r-progress").onclick = e => {
+  if (!player.duration) return;
+  const b = e.currentTarget.getBoundingClientRect();
+  player.currentTime = (e.clientX - b.left) / b.width * player.duration;
+};
+
+function setVol(v) { player.volume = preload.volume = v; $("r-vol").value = v; settings.vol = v; saveSettings(); }
+$("r-vol").oninput = e => setVol(Number(e.target.value));
+
+/* ---------- export / import ---------- */
+function exportLibrary() {
+  const blob = new Blob([JSON.stringify({ app: "c64-radio", version: 1, ...lib }, null, 2)], { type: "application/json" });
+  const a = el("a", { href: URL.createObjectURL(blob), download: "c64-radio-library.json" });
+  a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+$("lib-file").onchange = async e => {
+  const file = e.target.files[0]; e.target.value = "";
+  if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    let favs = 0, lists = 0;
+    knownIds(data.favs).forEach(i => { if (!lib.favs.includes(i)) { lib.favs.push(i); favs++; } });
+    (Array.isArray(data.playlists) ? data.playlists : []).forEach(p => {
+      if (!p || typeof p.name !== "string") return;
+      let name = p.name.slice(0, 80);
+      while (lib.playlists.some(x => x.name === name)) name += " (imported)";
+      lib.playlists.push({ id: newId(), name, tracks: knownIds(p.tracks) }); lists++;
+    });
+    saveLib(); libraryChanged();
+    setStatus("Imported " + favs + " new favourites and " + lists + " playlists.");
+  } catch (err) {
+    setStatus("Import failed: " + err.message);
+  }
+};
+
+if ("mediaSession" in navigator) {
+  navigator.mediaSession.setActionHandler("nexttrack", () => next(false));
+  navigator.mediaSession.setActionHandler("previoustrack", prev);
+}
+
+// Settings saved by the previous version of this page used `source`/`filter`/`target` keys.
+if (!settings.queue || typeof settings.queue.source !== "string") settings.queue = { source: "all", filter: "" };
+delete settings.source; delete settings.filter; delete settings.target;
+if (!playlist(settings.queue.source) && settings.queue.source !== "favs") settings.queue.source = "all";
+
+$("f-count").textContent = REMIXES.length;
+setVol(settings.vol);
+renderModes(); renderView();
+</script>
+</body>
+</html>
