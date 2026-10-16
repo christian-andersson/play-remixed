@@ -2,8 +2,10 @@
 
 A single-file web player for the Commodore 64 remixes on
 [Remix64 / RKO (remix.kwed.org)](https://remix.kwed.org/). It plays the remixes back to back, like a radio,
-with playlists, favourites, shuffle and repeat. There is no server and nothing to install: download
-`index.html` and open it in a browser.
+with playlists, favourites, shuffle and repeat. There is no server and nothing to install.
+
+**▶ Play it here: https://christian-andersson.github.io/play-remixed/**, or download `index.html` and
+open it in a browser.
 
 ## Features
 
