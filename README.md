@@ -58,7 +58,8 @@ on the TV's upper knob to change channel (colour scheme).
 | Esc | Back / close |
 | `?` | Help |
 
-The TV appears when the window is at least 720 × 500 pixels. On smaller windows and phones, the screen
+The TV appears when the window is large enough for the screen inside it to use characters of at least
+12 px. The TV is then sized to fit snugly around the screen. On smaller windows and phones, the screen
 fills the window with the C64 border around it.
 
 Favourites, playlists and settings are stored in the browser's `localStorage`. They belong to that
@@ -99,8 +100,10 @@ drawn like the real machine:
    pixel pattern, which gives an exact copy of the C64 character ROM.
 2. **Each frame:** the page draws the buffer into a 320 × 200 pixel image, which is the C64's
    resolution, using those bitmaps and the colour of each cell. Only changed cells are redrawn.
-3. **On screen:** a `<canvas>` enlarges the image with `image-rendering: pixelated`, in steps of whole
-   device pixels. Its corner sits on a whole device pixel, so the pixels stay sharp and even.
+3. **On screen:** a `<canvas>` enlarges the image with `image-rendering: pixelated`. Each C64 pixel
+   always covers a whole number of device pixels (1×, 2×, 3×…), and the canvas corner sits on a whole
+   device pixel, so every character is pixel-perfect. The screen therefore grows in steps: 8, 16 and
+   24 px characters on a normal screen, and 8, 12, 16 and 20 px on a Retina screen.
 
 Drawing pixels instead of laying out text avoids the rounding seams that browsers leave between
 characters. Clicks are mapped to the character cell under the pointer.
@@ -118,6 +121,9 @@ Colodore colour, so the screen reads the same in every scheme.
 Trackpads send many small scroll events plus momentum, so scrolling is measured in distance: the list
 moves one row per 33 px. The channel knob turns one step per gesture, once 60 px of scrolling has built
 up in one direction, and ignores the rest of that gesture.
+
+Scrolling moves the view, not the selection, as in Finder. The selected tune can scroll out of sight;
+the arrow keys, PgUp/PgDn, Home and End move the selection and bring it back into view.
 
 The scrollbar thumb always sits on whole character cells. Each thumb position stands for exactly one
 list position, so dragging moves one cell at a time, and the thumb lands in the cell it was dragged to.
