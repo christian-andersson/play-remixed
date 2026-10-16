@@ -1,6 +1,8 @@
-"""Builds index.html: scrapes the Remix64 catalogue.
+"""Builds data/remixes.json, the remix index the player loads, from the remix.kwed.org catalogue.
 
-Usage: python3 build.py [remixes.json]   (without an argument it scrapes the site and saves remixes.json)
+Usage:
+  python3 build.py                    read the site again; also saves the raw list to remixes-raw.json
+  python3 build.py remixes-raw.json   rebuild from a saved raw list instead
 """
 import datetime, html, json, re, sys, time, urllib.parse, urllib.request
 from pathlib import Path
@@ -36,7 +38,7 @@ def scrape_remixes():
 
 
 def compact(remixes):
-    """Shrinks the list for embedding; decoded where REMIXES is defined in template.html.
+    """Shrinks the list for the player; unpacked by unpackIndex() in index.html.
 
     Each song is [id step, title, arranger index, composer index] plus the file name only when it
     is not "<arranger> - <title>.mp3". Ids are stored as the step from the previous id.
@@ -52,16 +54,16 @@ def compact(remixes):
             song.append(r["f"])
         songs.append(song)
         prev = r["i"]
-    return {"arrangers": arrangers, "composers": composers, "songs": songs}
+    return {"built": datetime.date.today().isoformat(), "count": len(songs),
+            "arrangers": arrangers, "composers": composers, "songs": songs}
 
 
 if len(sys.argv) > 1:
     remixes = json.loads(Path(sys.argv[1]).read_text())
 else:
     remixes = scrape_remixes()
-    (HERE / "remixes.json").write_text(json.dumps(remixes, ensure_ascii=False))   # reuse with: build.py remixes.json
-page = (HERE / "template.html").read_text()
-page = page.replace("__REMIXES__", json.dumps(compact(remixes), ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/"))
-page = page.replace("__BUILT__", datetime.date.today().isoformat())
-(HERE / "index.html").write_text(page)
-print(f"index.html: {len(remixes)} remixes")
+    (HERE / "remixes-raw.json").write_text(json.dumps(remixes, ensure_ascii=False))
+out = HERE / "data" / "remixes.json"
+out.parent.mkdir(exist_ok=True)
+out.write_text(json.dumps(compact(remixes), ensure_ascii=False, separators=(",", ":")) + "\n")
+print(f"{out.relative_to(HERE)}: {len(remixes)} remixes, {out.stat().st_size // 1024} KB")
