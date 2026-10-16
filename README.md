@@ -12,6 +12,8 @@ like a radio, with playlists, favourites, shuffle and repeat. There is no server
 - **The whole catalogue:** all remixes on remix.kwed.org (5,255 when the list was last built).
 - **A C64 screen:** everything is drawn with the C64 character set and its 16 colours on a 40 × 25 grid.
   Frames and buttons are made from characters, not HTML elements.
+- **TV channels:** the TV's upper knob switches between four colour schemes: Colodore, Pepto, a green
+  phosphor monitor and a black-and-white TV.
 - **Browse and search** by title, remixer or composer, for example `Hubbard`, `Galway` or `Commando`.
 - **Playlists:** create, rename, delete, reorder and play them. **+ LIST** adds any tune to one or more
   lists without playing it.
@@ -31,8 +33,9 @@ Serve the folder from any static web host, such as GitHub Pages, and open `index
 browsers block it from loading `data/remixes.json`. For local testing, run `./serve.sh`; see
 [TESTING.md](TESTING.md).
 
-**Mouse:** click buttons and ♥. Double-click a tune to play it. Scroll the list with the wheel or the
-scrollbar on the right.
+**Mouse:** click buttons and ♥. Double-click a tune to play it. Scroll the list with the wheel or
+trackpad, or drag the scrollbar on the right; clicking the scrollbar's track jumps there. Click or scroll
+on the TV's upper knob to change channel (colour scheme).
 
 | Key | Action |
 |---|---|
@@ -98,6 +101,23 @@ drawn like the real machine:
 
 Drawing pixels instead of laying out text avoids the rounding seams that browsers leave between
 characters. Clicks are mapped to the character cell under the pointer.
+
+### Colours
+
+The 16 C64 colours are CSS variables on `body`, `--c0` to `--c15`. Each colour scheme is one
+`body[data-scheme="…"]` block. The page border and screen use those variables, and the pixel renderer
+reads its palette from them whenever the scheme changes. To add a scheme, add a CSS block and its id to
+`SCHEMES` in the script. The green and black-and-white schemes are derived from the brightness of each
+Colodore colour, so the screen reads the same in every scheme.
+
+### Scrolling
+
+Trackpads send many small scroll events plus momentum, so scrolling is measured in distance: the list
+moves one row per 33 px. The channel knob turns one step per gesture, once 60 px of scrolling has built
+up in one direction, and ignores the rest of that gesture.
+
+The scrollbar thumb always sits on whole character cells. Each thumb position stands for exactly one
+list position, so dragging moves one cell at a time, and the thumb lands in the cell it was dragged to.
 
 Typing goes through a hidden input field, so the phone keyboard also works.
 
