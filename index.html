@@ -128,7 +128,7 @@
 
 <script>
 // The remix index lives in data/remixes.json (written by build.py) and is loaded at start-up.
-let REMIXES = [], BY_ID = new Map(), NEWEST_FIRST = [], BUILT = "";
+let REMIXES = [], BY_ID = new Map(), BUILT = "";
 // Unpacks the compact form: each song is [id step, title, arranger, composer, file?], where the file
 // name is only given when it is not "<arranger> - <title>.mp3".
 function unpackIndex({ built, arrangers, composers, songs }) {
@@ -138,8 +138,8 @@ function unpackIndex({ built, arrangers, composers, songs }) {
     return { i: id, t, a: arrangers[a], c: composers[c], f: f || arrangers[a] + " - " + t + ".mp3" };
   });
   BY_ID = new Map(REMIXES.map(r => [r.i, r]));
-  NEWEST_FIRST = REMIXES.slice().reverse();
   BUILT = built || "";
+  sortedAll = {};
 }
 const RKO = "https://remix.kwed.org";
 const store = {
@@ -304,7 +304,8 @@ function fit() {
    ====================================================================================== */
 // view: what the library box shows ("browse", "favs", "playlists", "recent" or a playlist id).
 // queue: what the player plays from; it only changes when the user starts playback somewhere.
-const settings = Object.assign({ shuffle: true, repeat: "all", vol: 0.8, view: "browse", queue: { source: "all", filter: "" } },
+const settings = Object.assign({ shuffle: true, repeat: "all", vol: 0.8, view: "browse", queue: { source: "all", filter: "" },
+                                 sort: { key: "id", dir: "d" } },
                                store.get("settings", {}));
 const saveSettings = () => store.set("settings", settings);
 const searches = { browse: "", favs: "", playlist: "" };
@@ -364,9 +365,30 @@ function countPlay(r) {
         { mode: "no-cors", redirect: "manual", cache: "no-store" }).catch(() => {});
 }
 
+// Sorting for Browse and Favourites (Recent keeps play order, playlists keep their own order).
+// key: "id" (remix number = release order), "title" or "remixer"; dir: "u" (A-Z, oldest first) or "d".
+const collator = new Intl.Collator("en", { sensitivity: "base", numeric: true });
+const SORTS = {
+  id: (a, b) => a.i - b.i,
+  title: (a, b) => collator.compare(a.t, b.t) || a.i - b.i,
+  remixer: (a, b) => collator.compare(a.a, b.a) || collator.compare(a.t, b.t) || a.i - b.i,
+};
+const sortedList = list => {
+  const { key, dir } = settings.sort, cmp = SORTS[key] || SORTS.id;
+  return list.slice().sort(dir === "d" ? (a, b) => cmp(b, a) : cmp);
+};
+let sortedAll = {};                                   // the whole catalogue per sort, computed once
+const allSorted = () => { const k = settings.sort.key + settings.sort.dir; return sortedAll[k] || (sortedAll[k] = sortedList(REMIXES)); };
+function setSort(key) {
+  const s = settings.sort;
+  settings.sort = s.key === key ? { key, dir: s.dir === "u" ? "d" : "u" } : { key, dir: key === "id" ? "d" : "u" };
+  ui.sel[settings.view] = 0; ui.top[settings.view] = 0;
+  saveSettings(); rebuildOrder(); render();
+}
+
 function tracksFor(source, filter) {
-  const list = source === "all" ? NEWEST_FIRST
-             : source === "favs" ? lib.favs.map(i => BY_ID.get(i))
+  const list = source === "all" ? allSorted()
+             : source === "favs" ? sortedList(lib.favs.map(i => BY_ID.get(i)))
              : source === "recent" ? recent
              : (playlist(source) || { tracks: [] }).tracks.map(i => BY_ID.get(i));
   const q = (filter || "").trim().toLowerCase();
@@ -724,6 +746,14 @@ function drawLibrary() {
               : settings.view === "recent" ? "RECENTLY PLAYED" : settings.view === "playlists" ? "PLAYLISTS" : "LIST " + p.name;
   box(0, 10, 40, 14, LBLUE, title.slice(0, 22), n + (isTrackView() ? " TUNES" : " LISTS"));
   put(0, 12, 107, LBLUE); put(39, 12, 115, LBLUE); for (let i = 1; i < 39; i++) put(i, 12, 64, LBLUE);
+  // column headers in the divider: click to sort, click the active one again to flip U (up) / D (down)
+  if (settings.view === "browse" || settings.view === "favs") {
+    [["title", "TITLE", 2], ["remixer", "REMIXER", 25], ["id", "#", 36]].forEach(([key, label, hx]) => {
+      const active = settings.sort.key === key, l = active ? label + " " + settings.sort.dir.toUpperCase() : label;
+      text(hx, 12, l, over(hx, 12, l.length) ? WHITE : active ? WHITE : LBLUE, active || over(hx, 12, l.length));
+      hit(hx, 12, l.length, 1, () => setSort(key));
+    });
+  }
 
   // row 11: search line or list tools
   if (isTrackView()) {
