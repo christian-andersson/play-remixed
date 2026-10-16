@@ -15,6 +15,9 @@ like a radio, with playlists, favourites, shuffle and repeat. There is no server
 - **TV channels:** the TV's upper knob switches between four colour schemes: Colodore, Pepto, a green
   phosphor monitor and a black-and-white TV.
 - **Browse and search** by title, remixer or composer, for example `Hubbard`, `Galway` or `Commando`.
+- **Sort** Browse and Favourites by clicking the column headers in the divider line: `TITLE`, `REMIXER`
+  or `#` (release order). Clicking the active header again flips the direction, shown as `U` (up: A–Z,
+  oldest first) or `D` (down), because the C64 character set has no down arrow.
 - **Playlists:** create, rename, delete, reorder and play them. **+ LIST** adds any tune to one or more
   lists without playing it.
 - **Favourites:** ♥ on any tune or on the one playing.
