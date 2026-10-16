@@ -34,14 +34,36 @@
   body { background: var(--c14); }
   body.tv { background: radial-gradient(ellipse at 50% 40%, #34343c, #141418 75%); }
   /* The tube holds the C64 border and screen. Without the TV it fills the window; with it, it sits in the glass. */
-  #tube { position: fixed; inset: 0; z-index: 1; display: flex; align-items: center; justify-content: center; background: var(--c14); overflow: hidden; }
+  #tube { position: fixed; inset: 0; z-index: 1; background: #000; overflow: hidden; }
   body.tv #tube { inset: auto; clip-path: url(#glass-clip); }
+  /* the picture: the C64 border with the screen in the middle */
+  #picture { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: var(--c14); }
+  /* TV power (lower knob): switching off collapses the picture to a bright line and then a dot, like a CRT */
+  body.tv-off #picture { transform: scale(0, 0); animation: crt-off .5s ease-in; }   /* the end state holds even without animation */
+  #picture.crt-on { animation: crt-on .35s ease-out; }
+  @keyframes crt-off {
+    0%   { transform: none; filter: none; }
+    55%  { transform: scale(1, .006); filter: brightness(3); }
+    85%  { transform: scale(.01, .006); filter: brightness(6); }
+    100% { transform: scale(0, 0); filter: brightness(6); }
+  }
+  @keyframes crt-on {
+    0%   { transform: scale(.01, .006); filter: brightness(6); }
+    40%  { transform: scale(1, .006); filter: brightness(3); }
+    100% { transform: none; filter: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    body.tv-off #picture { animation: none; visibility: hidden; }
+    #picture.crt-on { animation: none; }
+  }
   #tv, #tv-glass { position: fixed; display: none; }
   body.tv #tv, body.tv #tv-glass { display: block; }
   #tv { z-index: 0; filter: drop-shadow(0 24px 40px rgba(0, 0, 0, .55)); }
   #tv-glass { z-index: 2; pointer-events: none; }
-  #knob-channel { cursor: pointer; }
-  #knob-channel .knob-handle { transition: transform .25s ease-out; }
+  #knob-channel, #knob-power { cursor: pointer; }
+  #knob-channel .knob-handle, #knob-power .knob-handle { transition: transform .25s ease-out; }
+  #knob-power .knob-handle { transform: rotate(90deg); }               /* vertical: on */
+  body.tv-off #knob-power .knob-handle { transform: rotate(0deg); }    /* horizontal: off */
   #wrap { position: relative; }
   /* 320x200 real pixels, enlarged without smoothing so every C64 pixel becomes a sharp block */
   #screen { display: block; background: var(--c6); image-rendering: pixelated; image-rendering: crisp-edges; cursor: default;
@@ -96,21 +118,24 @@
     <rect x="1250" y="115" width="18" height="272"/><rect x="1280" y="115" width="18" height="272"/>
     <rect x="1310" y="115" width="18" height="272"/><rect x="1340" y="115" width="18" height="272"/>
   </g>
-  <!-- knobs: the upper one switches colour scheme (channel); the lower one is not wired up yet -->
+  <!-- knobs: the upper one switches colour scheme (channel), the lower one is the power switch -->
   <g id="knob-channel" class="knob" transform="translate(1280 552)">
     <title>Channel: click or scroll to change the colour scheme</title>
     <circle r="90" fill="#6b6766"/><circle r="84" fill="url(#tv-knob)" stroke="#0e0d0c" stroke-width="3"/>
-    <g class="knob-handle"><rect x="-112" y="-19" width="190" height="38" rx="19" fill="url(#tv-handle)" stroke="#0e0d0c" stroke-width="3"/></g>
+    <g class="knob-handle"><rect x="-95" y="-19" width="190" height="38" rx="19" fill="url(#tv-handle)" stroke="#0e0d0c" stroke-width="3"/></g>
   </g>
-  <g id="knob-volume" class="knob" transform="translate(1280 762)">
+  <g id="knob-power" class="knob" transform="translate(1280 762)">
+    <title>Power: click to switch the TV on or off</title>
     <circle r="90" fill="#6b6766"/><circle r="84" fill="url(#tv-knob)" stroke="#0e0d0c" stroke-width="3"/>
-    <g class="knob-handle" transform="rotate(-45)"><rect x="-95" y="-19" width="190" height="38" rx="19" fill="url(#tv-handle)" stroke="#0e0d0c" stroke-width="3"/></g>
+    <g class="knob-handle"><rect x="-95" y="-19" width="190" height="38" rx="19" fill="url(#tv-handle)" stroke="#0e0d0c" stroke-width="3"/></g>
   </g>
 </svg>
 <div id="tube">
-  <div id="wrap">
-    <canvas id="screen" width="320" height="200" aria-hidden="true"></canvas>
-    <input id="kbd" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Text input">
+  <div id="picture">
+    <div id="wrap">
+      <canvas id="screen" width="320" height="200" aria-hidden="true"></canvas>
+      <input id="kbd" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Text input">
+    </div>
   </div>
 </div>
 <!-- Shading over the glass: darker towards the curved edges, no reflection. -->
@@ -288,6 +313,7 @@ function fit() {
   const tvPx = snapPx(Math.min(g.w * maxS / (W + 2 * bw), g.h * maxS / (H + 2 * bh)));
   const tv = tvPx >= TV_MIN_PX;
   document.body.classList.toggle("tv", tv);
+  if (!tv) setPower(true);                 // the power knob is part of the TV, so without it the screen stays on
   if (tv) {
     px = tvPx;
     // the TV shrinks until its glass just fits that screen and its border
@@ -524,6 +550,23 @@ $("knob-channel").addEventListener("wheel", e => {
     knobWheel.sum = 0; knobWheel.locked = true;
   }
 }, { passive: false });
+
+// The lower knob is the TV's power switch: vertical is on, horizontal is off. Off blacks out the
+// picture and mutes the sound, but the music keeps running, so switching on again resumes mid-tune.
+// While off the C64 cannot be seen, so clicks and keys are ignored. It always starts switched on.
+let tvOn = true;
+function setPower(on) {
+  if (on === tvOn) return;
+  tvOn = on;
+  document.body.classList.toggle("tv-off", !on);
+  player.muted = preload.muted = !on;
+  const pic = $("picture");
+  pic.classList.remove("crt-on");
+  if (on) { void pic.offsetWidth; pic.classList.add("crt-on"); }      // restart the switch-on animation
+  else stopEdit();
+}
+$("picture").addEventListener("animationend", e => { if (e.animationName === "crt-on") $("picture").classList.remove("crt-on"); });
+$("knob-power").addEventListener("click", () => setPower(!tvOn));
 
 // Wheel distance in pixels, whatever unit the device reports (pixels, lines or pages).
 const wheelPixels = e => e.deltaY * (e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 400 : 1);
@@ -976,7 +1019,7 @@ function scrollTo(p) {
 }
 $("screen").addEventListener("pointerdown", e => {
   const s = ui.scroll, c = cellAt(e);
-  if (boot.state !== "ready" || ui.overlay || !s || c.x !== 39 || c.y < LIST_Y || c.y >= LIST_Y + LIST_H) return;
+  if (boot.state !== "ready" || !tvOn || ui.overlay || !s || c.x !== 39 || c.y < LIST_Y || c.y >= LIST_Y + LIST_H) return;
   // grab the thumb where it was clicked; a click on the track jumps the thumb there
   drag = { grab: c.y >= s.ty && c.y < s.ty + s.th ? c.y - s.ty : Math.floor(s.th / 2), p: -1 };
   try { $("screen").setPointerCapture(e.pointerId); } catch {}
@@ -997,7 +1040,7 @@ $("screen").addEventListener("pointermove", e => {
 $("screen").addEventListener("mousedown", e => e.preventDefault());
 $("screen").addEventListener("pointerleave", () => { mouse = { x: -1, y: -1 }; render(); });
 $("screen").addEventListener("click", e => {
-  if (boot.state !== "ready" || Date.now() - dragEnded < 100) return;   // the click that ends a drag
+  if (boot.state !== "ready" || !tvOn || Date.now() - dragEnded < 100) return;   // off, or the click that ends a drag
   const c = cellAt(e); mouse = c;
   const o = ui.overlay;
   if (o && (c.x < o.x || c.x >= o.x + o.w || c.y < o.y || c.y >= o.y + o.h)) return o.cancel();
@@ -1010,7 +1053,7 @@ $("screen").addEventListener("click", e => {
 let listWheel = 0;
 $("screen").addEventListener("wheel", e => {
   e.preventDefault();
-  if (boot.state !== "ready" || (ui.overlay && ui.overlay.kind !== "menu")) return;
+  if (boot.state !== "ready" || !tvOn || (ui.overlay && ui.overlay.kind !== "menu")) return;
   listWheel += wheelPixels(e);
   const rows = Math.trunc(listWheel / 33);
   if (!rows) return;
@@ -1028,7 +1071,7 @@ $("screen").addEventListener("touchmove", e => {
 }, { passive: true });
 
 document.addEventListener("keydown", e => {
-  if (boot.state !== "ready" || e.target === kbd || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (boot.state !== "ready" || !tvOn || e.target === kbd || e.metaKey || e.ctrlKey || e.altKey) return;
   const o = ui.overlay, k = e.key;
   const handled = () => { e.preventDefault(); };
   if (o) {
