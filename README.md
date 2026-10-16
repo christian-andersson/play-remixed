@@ -14,6 +14,8 @@ like a radio, with playlists, favourites, shuffle and repeat. There is no server
   Frames and buttons are made from characters, not HTML elements.
 - **TV channels:** the TV's upper knob switches between four colour schemes: Colodore, Pepto, a green
   phosphor monitor and a black-and-white TV.
+- **TV power:** the lower knob switches the TV off and on, with a CRT-style switch-off. The sound is muted
+  while it is off, but the music keeps playing, so switching on again resumes mid-tune.
 - **Browse and search** by title, remixer or composer, for example `Hubbard`, `Galway` or `Commando`.
 - **Sort** Browse and Favourites by clicking the column headers in the divider line: `TITLE`, `REMIXER`
   or `#` (release order). Clicking the active header again flips the direction, shown as `U` (up: A–Z,
@@ -38,7 +40,8 @@ browsers block it from loading `data/remixes.json`. For local testing, run `./se
 
 **Mouse:** click buttons and ♥. Double-click a tune to play it. Scroll the list with the wheel or
 trackpad, or drag the scrollbar on the right; clicking the scrollbar's track jumps there. Click or scroll
-on the TV's upper knob to change channel (colour scheme).
+on the TV's upper knob to change channel (colour scheme), and click the lower knob to switch the TV
+off or on.
 
 | Key | Action |
 |---|---|
