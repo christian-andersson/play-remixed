@@ -12,18 +12,39 @@
     src: url("fonts/C64_Pro_Mono-STYLE.woff2") format("woff2"), url("fonts/C64_Pro_Mono-STYLE.woff") format("woff");
     font-display: block;
   }
-  html, body { margin: 0; height: 100%; background: #706deb; overflow: hidden; }
+  /* All screen colours come from these 16 variables (the C64 palette, --c0 to --c15). Each colour scheme
+     is one block; the TV's channel knob switches between them, and the page reads them for its pixels. */
+  body {                                       /* channel 1: Colodore (Pepto, 2017) */
+    --c0: #000000; --c1: #ffffff; --c2: #813338; --c3: #75cec8; --c4: #8e3c97; --c5: #56ac4d; --c6: #2e2c9b; --c7: #edf171;
+    --c8: #8e5029; --c9: #553800; --c10: #c46c71; --c11: #4a4a4a; --c12: #7b7b7b; --c13: #a9ff9f; --c14: #706deb; --c15: #b2b2b2;
+  }
+  body[data-scheme="pepto"] {                  /* channel 2: Pepto's classic palette (VICE default for years) */
+    --c0: #000000; --c1: #ffffff; --c2: #68372b; --c3: #70a4b2; --c4: #6f3d86; --c5: #588d43; --c6: #352879; --c7: #b8c76f;
+    --c8: #6f4f25; --c9: #433900; --c10: #9a6759; --c11: #444444; --c12: #6c6c6c; --c13: #9ad284; --c14: #6c5eb5; --c15: #959595;
+  }
+  body[data-scheme="green"] {                  /* channel 3: green phosphor monitor, from each colour's brightness */
+    --c0: #08120a; --c1: #30ff50; --c2: #0b5810; --c3: #1cb82c; --c4: #0e6a14; --c5: #13901e; --c6: #0a470e; --c7: #27e341;
+    --c8: #0d6914; --c9: #0a480e; --c10: #138f1e; --c11: #0b5710; --c12: #11841a; --c13: #25dd3d; --c14: #11851b; --c15: #1bb72c;
+  }
+  body[data-scheme="bw"] {                     /* channel 4: black-and-white TV, from each colour's brightness */
+    --c0: #0c0c0c; --c1: #f8f8f8; --c2: #515151; --c3: #b1b1b1; --c4: #646464; --c5: #898989; --c6: #414141; --c7: #dcdcdc;
+    --c8: #636363; --c9: #424242; --c10: #898989; --c11: #505050; --c12: #7e7e7e; --c13: #d6d6d6; --c14: #7f7f7f; --c15: #b1b1b1;
+  }
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  body { background: var(--c14); }
   body.tv { background: radial-gradient(ellipse at 50% 40%, #34343c, #141418 75%); }
   /* The tube holds the C64 border and screen. Without the TV it fills the window; with it, it sits in the glass. */
-  #tube { position: fixed; inset: 0; z-index: 1; display: flex; align-items: center; justify-content: center; background: #706deb; overflow: hidden; }
+  #tube { position: fixed; inset: 0; z-index: 1; display: flex; align-items: center; justify-content: center; background: var(--c14); overflow: hidden; }
   body.tv #tube { inset: auto; clip-path: url(#glass-clip); }
   #tv, #tv-glass { position: fixed; display: none; }
   body.tv #tv, body.tv #tv-glass { display: block; }
   #tv { z-index: 0; filter: drop-shadow(0 24px 40px rgba(0, 0, 0, .55)); }
   #tv-glass { z-index: 2; pointer-events: none; }
+  #knob-channel { cursor: pointer; }
+  #knob-channel .knob-handle { transition: transform .25s ease-out; }
   #wrap { position: relative; }
   /* 320x200 real pixels, enlarged without smoothing so every C64 pixel becomes a sharp block */
-  #screen { display: block; background: #2e2c9b; image-rendering: pixelated; image-rendering: crisp-edges; cursor: default;
+  #screen { display: block; background: var(--c6); image-rendering: pixelated; image-rendering: crisp-edges; cursor: default;
     user-select: none; -webkit-user-select: none; touch-action: none; }
   /* Hidden field that receives typing (and opens the keyboard on phones) while the grid shows the text. */
   #kbd { position: absolute; opacity: 0; border: 0; padding: 0; margin: 0; font-size: 16px; pointer-events: none; }
@@ -75,8 +96,9 @@
     <rect x="1250" y="115" width="18" height="272"/><rect x="1280" y="115" width="18" height="272"/>
     <rect x="1310" y="115" width="18" height="272"/><rect x="1340" y="115" width="18" height="272"/>
   </g>
-  <!-- knobs: kept as separate groups so they can be wired up later (e.g. channel and volume) -->
+  <!-- knobs: the upper one switches colour scheme (channel); the lower one is not wired up yet -->
   <g id="knob-channel" class="knob" transform="translate(1280 552)">
+    <title>Channel: click or scroll to change the colour scheme</title>
     <circle r="90" fill="#6b6766"/><circle r="84" fill="url(#tv-knob)" stroke="#0e0d0c" stroke-width="3"/>
     <g class="knob-handle"><rect x="-112" y="-19" width="190" height="38" rx="19" fill="url(#tv-handle)" stroke="#0e0d0c" stroke-width="3"/></g>
   </g>
@@ -189,11 +211,18 @@ const $ = id => document.getElementById(id);
 
 // The screen is drawn as real pixels: a 320x200 image where each cell is the 8x8 bitmap of its
 // screen code. The bitmaps (a copy of the C64 character ROM) are read from the font once at start-up.
-// Colodore palette (Pepto): 0 black, 1 white, 2 red, 3 cyan, 4 purple, 5 green, 6 blue, 7 yellow,
-// 8 orange, 9 brown, 10 light red, 11 dark grey, 12 grey, 13 light green, 14 light blue, 15 light grey
-const PALETTE = ["#000000", "#ffffff", "#813338", "#75cec8", "#8e3c97", "#56ac4d", "#2e2c9b", "#edf171",
-                 "#8e5029", "#553800", "#c46c71", "#4a4a4a", "#7b7b7b", "#a9ff9f", "#706deb", "#b2b2b2"]
-  .map(h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)));
+// Palette as [r, g, b] for colours 0 black, 1 white, 2 red, 3 cyan, 4 purple, 5 green, 6 blue, 7 yellow,
+// 8 orange, 9 brown, 10 light red, 11 dark grey, 12 grey, 13 light green, 14 light blue, 15 light grey.
+// Read from the CSS variables --c0 to --c15 of the current colour scheme.
+let PALETTE = [];
+function readPalette() {
+  const css = getComputedStyle(document.body);
+  PALETTE = Array.from({ length: 16 }, (_, n) => {
+    const h = css.getPropertyValue("--c" + n).trim();
+    return [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  });
+  shownCodes.fill(255);                                // repaint every cell in the new colours
+}
 const CHARSET = new Uint8Array(256 * 8);              // 8 bytes per screen code, bit 7 = leftmost pixel
 let charsetReady = false;
 async function loadCharset() {
@@ -435,6 +464,38 @@ function togglePlay() {
 }
 
 function setVol(v) { v = Math.min(1, Math.max(0, Math.round(v * 10) / 10)); player.volume = preload.volume = v; settings.vol = v; saveSettings(); render(); }
+// Colour schemes, one per TV channel; ids match the body[data-scheme] blocks in the CSS.
+const SCHEMES = ["colodore", "pepto", "green", "bw"];
+function setScheme(n) {
+  n = ((n % SCHEMES.length) + SCHEMES.length) % SCHEMES.length;
+  settings.scheme = n; saveSettings();
+  if (n) document.body.dataset.scheme = SCHEMES[n]; else delete document.body.dataset.scheme;
+  readPalette();
+  // the knob handle is level in channel 1 and turns 45 degrees per channel
+  document.querySelector("#knob-channel .knob-handle").style.transform = "rotate(" + n * 45 + "deg)";
+  render();
+}
+// The knob belongs to the TV, not the C64, so changing it shows nothing on the C64 screen itself.
+$("knob-channel").addEventListener("click", () => setScheme((settings.scheme || 0) + 1));
+// Scrolling turns the knob like a detented knob: one channel per gesture, once enough scrolling has
+// built up in one direction. Trackpads send many tiny events plus momentum, so the rest of the gesture
+// is ignored until the events stop.
+const knobWheel = { sum: 0, locked: false, quiet: 0 };
+$("knob-channel").addEventListener("wheel", e => {
+  e.preventDefault();
+  clearTimeout(knobWheel.quiet);
+  knobWheel.quiet = setTimeout(() => { knobWheel.sum = 0; knobWheel.locked = false; }, 200);
+  if (knobWheel.locked) return;
+  knobWheel.sum += wheelPixels(e);
+  if (Math.abs(knobWheel.sum) >= 60) {
+    setScheme((settings.scheme || 0) + Math.sign(knobWheel.sum));
+    knobWheel.sum = 0; knobWheel.locked = true;
+  }
+}, { passive: false });
+
+// Wheel distance in pixels, whatever unit the device reports (pixels, lines or pages).
+const wheelPixels = e => e.deltaY * (e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 400 : 1);
+
 function toggleShuffle() { settings.shuffle = !settings.shuffle; saveSettings(); rebuildOrder(); render(); }
 function cycleRepeat() { settings.repeat = { off: "all", all: "one", one: "off" }[settings.repeat]; saveSettings(); warmNext(); render(); }
 
@@ -720,12 +781,17 @@ function drawLibrary() {
               : ["THIS LIST IS EMPTY.", "GO TO BROWSE, FIND TUNES AND", "PRESS + LIST TO ADD THEM HERE."];
     msg.forEach((m, k) => text(2, LIST_Y + 1 + k, m, LGREY));
   }
-  // scrollbar in the right border; clicking above or below the thumb pages the list
+  // scrollbar in the right border: the thumb sits on whole cells, and each thumb position stands for
+  // exactly one list position (see scrollTo), so dragging and scrolling always agree
+  ui.scroll = null;
   if (n > LIST_H) {
-    const th = Math.max(1, Math.round(LIST_H * LIST_H / n));
-    const ty = LIST_Y + Math.round((LIST_H - th) * top / (n - LIST_H));
-    for (let k = 0; k < LIST_H; k++) put(39, LIST_Y + k, LIST_Y + k >= ty && LIST_Y + k < ty + th ? 160 : 102, LIST_Y + k >= ty && LIST_Y + k < ty + th ? WHITE : DGREY);
-    hit(39, LIST_Y, 1, LIST_H, (x, y) => moveSel(y < ty ? -LIST_H : y >= ty + th ? LIST_H : 0));
+    const th = Math.max(1, Math.round(LIST_H * LIST_H / n)), span = LIST_H - th;
+    const ty = LIST_Y + Math.round(span * top / (n - LIST_H));
+    for (let k = 0; k < LIST_H; k++) {
+      const on = LIST_Y + k >= ty && LIST_Y + k < ty + th;
+      put(39, LIST_Y + k, on ? 160 : 102, on ? WHITE : DGREY);
+    }
+    ui.scroll = { n, th, ty, span };
   }
 
   // row 22: actions for the selected row
@@ -846,14 +912,42 @@ function rowClick(i) {
   if (dbl) activate(); else render();
 }
 
+// Scrollbar dragging. Thumb position p (0 = top cell) maps to list top round(p * (n - 9) / span), and
+// drawing maps back with the same rounding, so the thumb lands on the cell it was dragged to.
+let drag = null, dragEnded = 0;
+function scrollTo(p) {
+  const s = ui.scroll; if (!s) return;
+  p = Math.max(0, Math.min(s.span, p));
+  const v = settings.view, offset = (ui.sel[v] || 0) - (ui.top[v] || 0);
+  const top = Math.round(p * (s.n - LIST_H) / s.span);
+  ui.top[v] = top;
+  ui.sel[v] = top + Math.max(0, Math.min(LIST_H - 1, offset));   // keep the selection's row on screen
+  render();
+}
+$("screen").addEventListener("pointerdown", e => {
+  const s = ui.scroll, c = cellAt(e);
+  if (boot.state !== "ready" || ui.overlay || !s || c.x !== 39 || c.y < LIST_Y || c.y >= LIST_Y + LIST_H) return;
+  // grab the thumb where it was clicked; a click on the track jumps the thumb there
+  drag = { grab: c.y >= s.ty && c.y < s.ty + s.th ? c.y - s.ty : Math.floor(s.th / 2), p: -1 };
+  try { $("screen").setPointerCapture(e.pointerId); } catch {}
+  dragTo(c.y);
+});
+function dragTo(y) {
+  const p = y - drag.grab - LIST_Y;
+  if (p !== drag.p) { drag.p = p; scrollTo(p); }
+}
+const endDrag = () => { if (drag) { drag = null; dragEnded = Date.now(); } };
+$("screen").addEventListener("pointerup", endDrag);
+$("screen").addEventListener("pointercancel", endDrag);
 $("screen").addEventListener("pointermove", e => {
   const c = cellAt(e);
+  if (drag) return dragTo(c.y);
   if (c.x !== mouse.x || c.y !== mouse.y) { mouse = c; render(); }
 });
 $("screen").addEventListener("mousedown", e => e.preventDefault());
 $("screen").addEventListener("pointerleave", () => { mouse = { x: -1, y: -1 }; render(); });
 $("screen").addEventListener("click", e => {
-  if (boot.state !== "ready") return;
+  if (boot.state !== "ready" || Date.now() - dragEnded < 100) return;   // the click that ends a drag
   const c = cellAt(e); mouse = c;
   const o = ui.overlay;
   if (o && (c.x < o.x || c.x >= o.x + o.w || c.y < o.y || c.y >= o.y + o.h)) return o.cancel();
@@ -861,18 +955,24 @@ $("screen").addEventListener("click", e => {
   if (ui.edit && ui.edit.kind === "search" && !(h && h.fn === startSearch)) stopEdit();
   if (h) h.fn(c.x, c.y); else render();
 });
+// Lists scroll one row per ~33 px of scrolling: three rows per mouse-wheel notch, and smoothly with a
+// trackpad, which sends many small events.
+let listWheel = 0;
 $("screen").addEventListener("wheel", e => {
   e.preventDefault();
-  if (boot.state !== "ready") return;
-  const d = Math.sign(e.deltaY);
-  if (ui.overlay && ui.overlay.kind === "menu") { ui.overlay.sel += d; return render(); }
-  if (!ui.overlay) moveSel(d * 3);
+  if (boot.state !== "ready" || (ui.overlay && ui.overlay.kind !== "menu")) return;
+  listWheel += wheelPixels(e);
+  const rows = Math.trunc(listWheel / 33);
+  if (!rows) return;
+  listWheel -= rows * 33;
+  if (ui.overlay) { ui.overlay.sel += rows; return render(); }
+  moveSel(rows);
 }, { passive: false });
 // Touch: drag up/down over the list to scroll it.
 let touchY = null;
 $("screen").addEventListener("touchstart", e => { touchY = e.touches[0].clientY; }, { passive: true });
 $("screen").addEventListener("touchmove", e => {
-  if (touchY === null || ui.overlay) return;
+  if (touchY === null || ui.overlay || drag) return;
   const dy = touchY - e.touches[0].clientY, step = px * 1.2;
   if (Math.abs(dy) >= step) { moveSel(Math.trunc(dy / step)); touchY = e.touches[0].clientY; }
 }, { passive: true });
@@ -1013,6 +1113,7 @@ async function loadIndex() {
 }
 
 player.volume = preload.volume = settings.vol;
+setScheme(settings.scheme || 0);
 addEventListener("resize", fit);
 setInterval(render, 100);              // cursor blink, scrolling titles and the progress bar
 fit();
