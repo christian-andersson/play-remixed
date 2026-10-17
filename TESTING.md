@@ -47,8 +47,8 @@ On small screens the TV is hidden and the C64 screen fills the window.
 
 ## After changing things
 
-- **`index.html`:** reload the page. If an old version shows, do a hard reload (Cmd+Shift+R on macOS,
-  Ctrl+Shift+R elsewhere).
+- **`index.html`, `css/` or `js/`:** reload the page. If an old version shows, do a hard reload
+  (Cmd+Shift+R on macOS, Ctrl+Shift+R elsewhere).
 - **The remix index:** rebuild it, then reload the page. The page asks the server for a fresh copy each
   time, so a normal reload is enough.
   ```sh
