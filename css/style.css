@@ -1,0 +1,67 @@
+/* C64 Remix Radio: colour schemes, layout, the TV and its CRT effects. */
+
+/* C64 Pro Mono by Style (https://style64.org/c64-truetype), used unmodified under its licence: fonts/license.txt */
+@font-face {
+  font-family: "C64 Pro Mono";
+  src: url("../fonts/C64_Pro_Mono-STYLE.woff2") format("woff2"), url("../fonts/C64_Pro_Mono-STYLE.woff") format("woff");
+  font-display: block;
+}
+/* All screen colours come from these 16 variables (the C64 palette, --c0 to --c15). Each colour scheme
+   is one block; the TV's channel knob switches between them, and the page reads them for its pixels. */
+body {                                       /* channel 1: Colodore (Pepto, 2017) */
+  --c0: #000000; --c1: #ffffff; --c2: #813338; --c3: #75cec8; --c4: #8e3c97; --c5: #56ac4d; --c6: #2e2c9b; --c7: #edf171;
+  --c8: #8e5029; --c9: #553800; --c10: #c46c71; --c11: #4a4a4a; --c12: #7b7b7b; --c13: #a9ff9f; --c14: #706deb; --c15: #b2b2b2;
+}
+body[data-scheme="pepto"] {                  /* channel 2: Pepto's classic palette (VICE default for years) */
+  --c0: #000000; --c1: #ffffff; --c2: #68372b; --c3: #70a4b2; --c4: #6f3d86; --c5: #588d43; --c6: #352879; --c7: #b8c76f;
+  --c8: #6f4f25; --c9: #433900; --c10: #9a6759; --c11: #444444; --c12: #6c6c6c; --c13: #9ad284; --c14: #6c5eb5; --c15: #959595;
+}
+body[data-scheme="green"] {                  /* channel 3: green phosphor monitor, from each colour's brightness */
+  --c0: #08120a; --c1: #30ff50; --c2: #0b5810; --c3: #1cb82c; --c4: #0e6a14; --c5: #13901e; --c6: #0a470e; --c7: #27e341;
+  --c8: #0d6914; --c9: #0a480e; --c10: #138f1e; --c11: #0b5710; --c12: #11841a; --c13: #25dd3d; --c14: #11851b; --c15: #1bb72c;
+}
+body[data-scheme="bw"] {                     /* channel 4: black-and-white TV, from each colour's brightness */
+  --c0: #0c0c0c; --c1: #f8f8f8; --c2: #515151; --c3: #b1b1b1; --c4: #646464; --c5: #898989; --c6: #414141; --c7: #dcdcdc;
+  --c8: #636363; --c9: #424242; --c10: #898989; --c11: #505050; --c12: #7e7e7e; --c13: #d6d6d6; --c14: #7f7f7f; --c15: #b1b1b1;
+}
+html, body { margin: 0; height: 100%; overflow: hidden; }
+body { background: var(--c14); }
+body.tv { background: radial-gradient(ellipse at 50% 40%, #34343c, #141418 75%); }
+/* The tube holds the C64 border and screen. Without the TV it fills the window; with it, it sits in the glass. */
+#tube { position: fixed; inset: 0; z-index: 1; background: #000; overflow: hidden; }
+body.tv #tube { inset: auto; clip-path: url(#glass-clip); }
+/* the picture: the C64 border with the screen in the middle */
+#picture { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: var(--c14); }
+/* TV power (lower knob): switching off collapses the picture to a bright line and then a dot, like a CRT */
+body.tv-off #picture { transform: scale(0, 0); animation: crt-off .5s ease-in; }   /* the end state holds even without animation */
+#picture.crt-on { animation: crt-on .35s ease-out; }
+@keyframes crt-off {
+  0%   { transform: none; filter: none; }
+  55%  { transform: scale(1, .006); filter: brightness(3); }
+  85%  { transform: scale(.01, .006); filter: brightness(6); }
+  100% { transform: scale(0, 0); filter: brightness(6); }
+}
+@keyframes crt-on {
+  0%   { transform: scale(.01, .006); filter: brightness(6); }
+  40%  { transform: scale(1, .006); filter: brightness(3); }
+  100% { transform: none; filter: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.tv-off #picture { animation: none; visibility: hidden; }
+  #picture.crt-on { animation: none; }
+}
+#tv, #tv-glass { position: fixed; display: none; }
+body.tv #tv, body.tv #tv-glass { display: block; }
+#tv { z-index: 0; filter: drop-shadow(0 24px 40px rgba(0, 0, 0, .55)); }
+#tv-glass { z-index: 2; pointer-events: none; }
+#knob-channel, #knob-power { cursor: pointer; }
+#knob-channel .knob-handle, #knob-power .knob-handle { transition: transform .25s ease-out; }
+#knob-power .knob-handle { transform: rotate(90deg); }               /* vertical: on */
+body.tv-off #knob-power .knob-handle { transform: rotate(0deg); }    /* horizontal: off */
+#wrap { position: relative; }
+/* 320x200 real pixels, enlarged without smoothing so every C64 pixel becomes a sharp block */
+#screen { display: block; background: var(--c6); image-rendering: pixelated; image-rendering: crisp-edges; cursor: default;
+  user-select: none; -webkit-user-select: none; touch-action: none; }
+/* Hidden field that receives typing (and opens the keyboard on phones) while the grid shows the text. */
+#kbd { position: absolute; opacity: 0; border: 0; padding: 0; margin: 0; font-size: 16px; pointer-events: none; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
