@@ -5,3 +5,4 @@ __pycache__/
 .vscode/
 remixes-raw.json
 .commit-msg.md
+_site/
