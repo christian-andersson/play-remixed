@@ -78,9 +78,14 @@ function togglePlaylistTrack(p, r) {
   setStatus((n >= 0 ? "REMOVED FROM " : "ADDED TO ") + p.name, LGREEN);
 }
 
-const player = new Audio();
-const preload = new Audio();          // warms up the next track so transitions are near-instant
-preload.preload = "auto";
+// Two audio elements take turns: `player` plays the current tune while `preload` loads the next one.
+// The next tune starts just before the current one ends and the two swap roles, so the sound never
+// stops between tunes. Phones may suspend a page with a locked screen once it falls silent, which
+// would keep the next tune from starting.
+let player = new Audio(), preload = new Audio();
+player.preload = preload.preload = "auto";
+let preloaded = null;                 // the tune loaded in `preload`
+const HANDOFF = 0.6;                  // seconds before the end at which the next tune starts
 let order = [], pos = -1, current = null, uncounted = null, failures = 0, recent = [];
 
 const fileUrl = r => RKO + "/files/RKOfiles/" + encodeURIComponent(r.f);
@@ -162,12 +167,23 @@ function peekNext() {
 
 function warmNext() {
   const n = peekNext();
-  if (n && n !== current) preload.src = fileUrl(n);
+  // leave `preload` alone while it is still playing the end of the previous tune
+  if (!n || n === current || n === preloaded || (!preload.paused && !preload.ended)) return;
+  preload.src = fileUrl(n); preload.load(); preloaded = n;
 }
 
 function playTrack(r) {
   current = r;
-  player.src = fileUrl(r);
+  if (r === preloaded && !preload.error) {
+    // swap: the preloaded element becomes the player; the old one finishes its last moment, then idles
+    [player, preload] = [preload, player];
+    if (player.currentTime) player.currentTime = 0;
+    const tail = preload.duration - preload.currentTime;
+    if (!(tail > 0 && tail <= HANDOFF + 0.5)) preload.pause();
+  } else {
+    player.src = fileUrl(r);
+  }
+  preloaded = null;
   uncounted = r;
   player.play().catch(e => setStatus("?PLAYBACK BLOCKED. PRESS PLAY."));
   document.title = r.t + " - " + r.a;
@@ -274,18 +290,46 @@ function libraryChanged() {
 
 
 /* ---------- audio events ---------- */
-player.onplaying = () => {
-  failures = 0;
-  if (uncounted) { countPlay(uncounted); uncounted = null; }
-};
-player.onplay = player.onpause = () => render();
-player.onended = () => next(true);
-player.onerror = () => {
-  // Skip broken files, but stop after several consecutive failures (likely offline).
-  if (++failures > 5) return setStatus("?LOAD ERROR. CHECK CONNECTION.");
-  setStatus("?FILE NOT FOUND ERROR. SKIPPING.");
-  next(false);
-};
+// Both elements get the same handlers; only the one currently acting as `player` reacts, except that
+// the other one, once it has finished the tail of the previous tune, may start loading the next.
+function wireAudio(el) {
+  el.addEventListener("playing", () => {
+    if (el !== player) return;
+    failures = 0;
+    if (uncounted) { countPlay(uncounted); uncounted = null; }
+    updateMediaSession();
+  });
+  el.addEventListener("play", () => { if (el === player) { updateMediaSession(); render(); } });
+  el.addEventListener("pause", () => { if (el === player) { updateMediaSession(); render(); } });
+  el.addEventListener("ended", () => { if (el === player) next(true); else warmNext(); });
+  el.addEventListener("timeupdate", () => {
+    if (el !== player) return;
+    // start the next tune a moment early if it is loaded, so there is no silent gap
+    const left = el.duration - el.currentTime;
+    if (left > 0 && left <= HANDOFF && settings.repeat !== "one" && preloaded && preloaded === peekNext()
+        && preload.readyState >= 3) next(true);
+    else if (Math.floor(el.currentTime) % 5 === 0) updateMediaSession();
+  });
+  el.addEventListener("error", () => {
+    if (el !== player) { if (el === preload) preloaded = null; return; }   // a failed preload is retried on play
+    // Skip broken files, but stop after several consecutive failures (likely offline).
+    if (++failures > 5) return setStatus("?LOAD ERROR. CHECK CONNECTION.");
+    setStatus("?FILE NOT FOUND ERROR. SKIPPING.");
+    next(false);
+  });
+}
+wireAudio(player); wireAudio(preload);
+
+// Lock-screen and notification controls, and the position shown there. An active media session also
+// helps phones keep the page running with the screen locked.
+function updateMediaSession() {
+  if (!("mediaSession" in navigator)) return;
+  navigator.mediaSession.playbackState = current ? (player.paused ? "paused" : "playing") : "none";
+  const d = player.duration, t = player.currentTime;
+  if (navigator.mediaSession.setPositionState && isFinite(d) && d > 0 && t <= d) {
+    try { navigator.mediaSession.setPositionState({ duration: d, position: t, playbackRate: player.playbackRate || 1 }); } catch {}
+  }
+}
 
 /* ---------- export / import ---------- */
 function exportLibrary() {
@@ -315,6 +359,10 @@ $("lib-file").onchange = async e => {
 };
 
 if ("mediaSession" in navigator) {
-  navigator.mediaSession.setActionHandler("nexttrack", () => next(false));
-  navigator.mediaSession.setActionHandler("previoustrack", prev);
+  const action = (name, fn) => { try { navigator.mediaSession.setActionHandler(name, fn); } catch {} };
+  action("play", () => (current ? player.play() : togglePlay()));
+  action("pause", () => player.pause());
+  action("nexttrack", () => next(false));
+  action("previoustrack", prev);
+  action("seekto", e => { if (isFinite(player.duration)) { player.currentTime = e.seekTime; updateMediaSession(); } });
 }
