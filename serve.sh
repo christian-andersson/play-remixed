@@ -24,7 +24,7 @@ for arg in "$@"; do
 done
 
 if [ ! -f data/remixes.json ]; then
-  echo "data/remixes.json is missing. Build it first: python3 build.py" >&2
+  echo "data/remixes.json is missing. Restore it with: git checkout data/remixes.json" >&2
   exit 1
 fi
 
