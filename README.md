@@ -141,6 +141,11 @@ Typing goes through a hidden input field, so the phone keyboard also works.
 - **Character set only:** the C64 has no accented letters, so accents are removed (Bachliński shows as
   BACHLINSKI). It also has no ↓ or → characters.
 - **Phones:** 40 columns on a phone screen come out at about 9–10 px per character.
+- **Locked phone screens:** a tune that is playing keeps playing when the screen locks, and the lock
+  screen controls work, but the browser may stop after a tune or two because phones restrict web pages
+  in the background. On Android, setting the browser's battery use to **Unrestricted** (Settings → Apps →
+  Chrome → Battery) may help. The player already starts each next tune before the current one ends, so
+  the sound never stops between tunes.
 - **The list is a snapshot:** new remixes appear only after you rebuild.
 
 ## Updating the song list
