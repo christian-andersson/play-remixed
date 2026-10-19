@@ -1,6 +1,7 @@
 # Testing locally
 
-The player loads its remix index, `data/remixes.json`, with `fetch()`. Browsers block that for pages
+The player loads its remix index, `data/remixes.json`, with `fetch()`. Locally that is a sample of
+44 remixes; the full list is only built when the site is published. Browsers block that for pages
 opened straight from disk (`file://…`), so double-clicking `index.html` shows a C64 boot screen ending
 in `?FILE NOT FOUND ERROR`. To test locally, serve the folder over HTTP.
 
@@ -49,11 +50,11 @@ On small screens the TV is hidden and the C64 screen fills the window.
 
 - **`index.html`, `css/` or `js/`:** reload the page. If an old version shows, do a hard reload
   (Cmd+Shift+R on macOS, Ctrl+Shift+R elsewhere).
-- **The remix index:** rebuild it, then reload the page. The page asks the server for a fresh copy each
-  time, so a normal reload is enough.
+- **The remix index:** locally it is the 44-remix sample. To try the player with a full list, build
+  one into `data/remixes.json` from an export, but do not commit it:
   ```sh
-  python3 build.py                    # read remix.kwed.org again (about 106 pages, 1 minute)
-  python3 build.py remixes-raw.json   # rebuild from the raw list saved by the last run
+  python3 build.py --feed export.csv.gz
+  git checkout data/remixes.json        # put the sample back afterwards
   ```
 
 ## Starting from a clean state
@@ -82,7 +83,7 @@ Use **LISTS → EXPORT** first if you want to keep anything.
 | Symptom | Cause and fix |
 |---|---|
 | `?FILE NOT FOUND ERROR` with `FAILED TO FETCH` | The page was opened as a file. Use `./serve.sh`. |
-| `?FILE NOT FOUND ERROR` with `HTTP 404` | `data/remixes.json` is missing, or the server runs in another folder. Run `python3 build.py`, and start the server from the repository root. |
+| `?FILE NOT FOUND ERROR` with `HTTP 404` | `data/remixes.json` is missing, or the server runs in another folder. Restore it with `git checkout data/remixes.json`, and start the server from the repository root. |
 | `Address already in use` | Another program uses the port. Try `./serve.sh 8080`. |
 | Tunes do not play | The MP3s stream from remix.kwed.org, so check your internet connection. Browsers also block sound until you click or press a key once. |
 | Text looks blurry | Browser zoom is not at 100 %, or the window is very small. |
