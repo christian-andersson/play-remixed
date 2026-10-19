@@ -1,4 +1,10 @@
-# Publishes the player to GitHub Pages on every push to main.
+# Publishes the player to GitHub Pages once a day and on every push to main.
+#
+# The remix index is built here, from the private export provided by the remix.kwed.org owner, and is
+# not kept in the repository (the repository only has a small sample for local testing). The export's
+# link and login are the secrets RKO_FEED_URL, RKO_FEED_USER and RKO_FEED_PASSWORD. Until they are set,
+# the list that is already published is reused. If building or checking the list fails, nothing is
+# published and the previous version stays online.
 #
 # The actions used here are pinned to exact commits by .github/workflows/actions.lock, which GitHub
 # Actions enforces when the job starts. Update it with `gh actions-lock` whenever an action is added,
@@ -13,6 +19,8 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+  schedule:
+    - cron: "17 5 * * *"        # daily at 05:17 UTC; GitHub pauses schedules after 60 days without repository activity
   workflow_dispatch:
 
 permissions: {}
@@ -56,16 +64,44 @@ jobs:
         with:
           persist-credentials: false
 
+      - id: pages
+        uses: actions/configure-pages@v6.0.0
+
       - name: Build the site with versioned file links
         run: |
           mkdir _site
-          cp -R index.html favicon.svg LICENSE css js data fonts _site/
+          cp -R index.html favicon.svg LICENSE css js fonts _site/
           version="${GITHUB_SHA::7}"
           sed -i "s/?v=dev/?v=${version}/g" _site/index.html
           if grep -q '?v=dev' _site/index.html; then echo "index.html still has ?v=dev" >&2; exit 1; fi
           grep -o "?v=${version}" _site/index.html | wc -l
 
-      - uses: actions/configure-pages@v6.0.0
+      # The live list is the baseline for the size check, and the fallback while no export is configured.
+      - name: Build the remix index
+        env:
+          RKO_FEED_URL: ${{ secrets.RKO_FEED_URL }}
+          RKO_FEED_USER: ${{ secrets.RKO_FEED_USER }}
+          RKO_FEED_PASSWORD: ${{ secrets.RKO_FEED_PASSWORD }}
+          LIVE_INDEX: ${{ steps.pages.outputs.base_url }}/data/remixes.json
+        run: |
+          mkdir -p _site/data
+          if ! curl -fsS --retry 3 -o live.json "$LIVE_INDEX"; then echo '{"count":0}' > live.json; fi
+          if [ -n "$RKO_FEED_URL" ]; then
+            python3 build.py --feed "$RKO_FEED_URL" --out _site/data/remixes.json
+          else
+            echo "::warning::No remix export configured (RKO_FEED_URL); republishing the live list."
+            cp live.json _site/data/remixes.json
+          fi
+          python3 - <<'PY'
+          import json
+          new = json.load(open("_site/data/remixes.json")); old = json.load(open("live.json"))
+          n, o = new.get("count", 0), old.get("count", 0)
+          print(f"remix index: {n} remixes (live: {o})")
+          if new.get("sample") or n < 100:
+              raise SystemExit("refusing to publish: the index is empty or only the sample")
+          if o and n < o * 0.9:
+              raise SystemExit(f"refusing to publish: {n} remixes is more than 10% fewer than the live {o}")
+          PY
 
       - uses: actions/upload-pages-artifact@v5.0.0
         with:
