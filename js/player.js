@@ -86,19 +86,17 @@ let player = new Audio(), preload = new Audio();
 player.preload = preload.preload = "auto";
 let preloaded = null;                 // the tune loaded in `preload`
 const HANDOFF = 0.6;                  // seconds before the end at which the next tune starts
+const PRELOAD_AHEAD = 30;             // seconds before the end at which the next tune starts loading
 let order = [], pos = -1, current = null, uncounted = null, failures = 0, recent = [];
 
-const fileUrl = r => RKO + "/files/RKOfiles/" + encodeURIComponent(r.f);
+// Tunes are played from RKO's download link, which adds one to the tune's download count and redirects
+// to the MP3, so each tune that is loaded is counted once, as if it were downloaded from the site.
+const fileUrl = r => RKO + "/download.php/" + r.i + "/" + encodeURIComponent(r.f);
 
-// Credit the play on RKO's download counter: request download.php once. HEAD follows its redirect
-// to the MP3 without transferring the file a second time. (A no-cors request cannot use
-// redirect: "manual"; browsers reject it without sending anything.)
-function countPlay(r) {
-  fetch(RKO + "/download.php/" + r.i + "/" + encodeURIComponent(r.f),
-        { method: "HEAD", mode: "no-cors", cache: "no-store" }).catch(() => {});
-  // Also count it as one GoatCounter event, if its script loaded. Every tune counts under the same name,
-  // so the statistics show the total number of plays, not which tunes were played. no_session counts
-  // every play; without it GoatCounter counts a visitor's repeated plays only once.
+// Count a play as one GoatCounter event, if its script loaded. Every tune counts under the same name,
+// so the statistics show the total number of plays, not which tunes were played. no_session counts
+// every play; without it GoatCounter counts a visitor's repeated plays only once.
+function countPlay() {
   window.goatcounter?.count?.({ path: "play", title: "Tune played", event: true, no_session: true });
 }
 
@@ -170,8 +168,11 @@ function peekNext() {
   return settings.repeat === "all" && !settings.shuffle ? order[0] : null;
 }
 
+// Load the next tune in `preload`, but only near the end of the current one: loading it counts it as a
+// download on RKO, so it should only happen when it is about to play.
 function warmNext() {
   const n = peekNext();
+  if (!(player.duration - player.currentTime <= PRELOAD_AHEAD)) return;
   // leave `preload` alone while it is still playing the end of the previous tune
   if (!n || n === current || n === preloaded || (!preload.paused && !preload.ended)) return;
   preload.src = fileUrl(n); preload.load(); preloaded = n;
@@ -301,7 +302,7 @@ function wireAudio(el) {
   el.addEventListener("playing", () => {
     if (el !== player) return;
     failures = 0;
-    if (uncounted) { countPlay(uncounted); uncounted = null; }
+    if (uncounted) { countPlay(); uncounted = null; }
     updateMediaSession();
   });
   el.addEventListener("play", () => { if (el === player) { updateMediaSession(); render(); } });
@@ -313,7 +314,10 @@ function wireAudio(el) {
     const left = el.duration - el.currentTime;
     if (left > 0 && left <= HANDOFF && settings.repeat !== "one" && preloaded && preloaded === peekNext()
         && preload.readyState >= 3) next(true);
-    else if (Math.floor(el.currentTime) % 5 === 0) updateMediaSession();
+    else {
+      if (left <= PRELOAD_AHEAD) warmNext();
+      if (Math.floor(el.currentTime) % 5 === 0) updateMediaSession();
+    }
   });
   el.addEventListener("error", () => {
     if (el !== player) { if (el === preload) preloaded = null; return; }   // a failed preload is retried on play

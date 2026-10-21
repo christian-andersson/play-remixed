@@ -92,13 +92,15 @@ about 60 KB.
 
 ### Playback
 
-When the page runs, the browser's built-in audio player streams each MP3 straight from
-`https://remix.kwed.org/files/RKOfiles/…`; nothing goes through a proxy. The next tune starts loading
-early so tunes change quickly.
+When the page runs, the browser's built-in audio player streams each MP3 from remix.kwed.org; nothing
+goes through a proxy. It plays each tune from the site's download link, `download.php/<id>/<file>`,
+which adds one to the tune's download count and redirects to the MP3. So each tune counts as one
+download, just like downloading it from the site, and replaying it from the browser's memory does not
+count again.
 
-The site's `download.php/<id>` link redirects to the same file and also adds one to the download count.
-When a tune starts playing, the page sends one `HEAD` request to that link. It follows the redirect
-but receives only the headers, so the play is counted once without downloading the MP3 a second time.
+The next tune starts loading 30 seconds before the current one ends, so tunes change without a gap.
+It does not load earlier, because loading counts as a download, and a tune that is loaded early is
+more likely to be skipped.
 
 ### Statistics
 
