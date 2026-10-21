@@ -102,11 +102,12 @@ This counts the play once without downloading the MP3 a second time.
 
 ### Statistics
 
-The page uses [GoatCounter](https://www.goatcounter.com/) to count visits, and counts each tune that
-starts playing as an event named `play/<id>`. GoatCounter sets no cookies and stores no personal data;
-it records the page or tune, the referrer, and the browser, screen size and country. The script is
-pinned to a version and checked against its hash. If it is blocked, for example by an ad blocker,
-nothing is counted and the player works the same. GoatCounter does not count visits from `localhost` or local network addresses.
+The page uses [GoatCounter](https://www.goatcounter.com/) to count visits, and counts tunes played as
+one event named `play`: the total number of plays, not which tunes. GoatCounter sets no cookies and
+stores no personal data; it records the page, the referrer, and the browser, screen size and country.
+The script is pinned to a version and checked against its hash. If it is blocked, for example by an
+ad blocker, nothing is counted and the player works the same. GoatCounter does not count visits from
+`localhost` or local network addresses.
 
 ### The screen
 
