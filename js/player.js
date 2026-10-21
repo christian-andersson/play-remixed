@@ -95,6 +95,8 @@ const fileUrl = r => RKO + "/files/RKOfiles/" + encodeURIComponent(r.f);
 function countPlay(r) {
   fetch(RKO + "/download.php/" + r.i + "/" + encodeURIComponent(r.f),
         { mode: "no-cors", redirect: "manual", cache: "no-store" }).catch(() => {});
+  // Also count it as a GoatCounter event, if its script loaded, so the statistics show the most-played tunes.
+  window.goatcounter?.count?.({ path: "play/" + r.i, title: r.t + " - " + r.a, event: true });
 }
 
 // Sorting for Browse and Favourites (Recent keeps play order, playlists keep their own order).
