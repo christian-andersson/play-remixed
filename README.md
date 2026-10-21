@@ -103,10 +103,11 @@ This counts the play once without downloading the MP3 a second time.
 ### Statistics
 
 The page uses [GoatCounter](https://www.goatcounter.com/) to count visits, and counts tunes played as
-one event named `play`: the total number of plays, not which tunes. GoatCounter sets no cookies and
-stores no personal data; it records the page, the referrer, and the browser, screen size and country.
-The script is pinned to a version and checked against its hash. If it is blocked, for example by an
-ad blocker, nothing is counted and the player works the same. GoatCounter does not count visits from
+one event named `play`: the total number of plays, not which tunes. Each play is counted, also repeated
+plays by the same visitor. GoatCounter sets no cookies and stores no personal data; it records the page,
+the referrer, and the browser, screen width and country. The counting script, `js/goatcounter.js`, is
+GoatCounter's `count.js` kept in this repository, so the page loads no code from other sites. If the
+counter is blocked, for example by an ad blocker, nothing is counted and the player works the same. GoatCounter does not count visits from
 `localhost` or local network addresses.
 
 ### The screen
@@ -218,6 +219,7 @@ gh actions-lock --verify                      # check it, as the workflow does
 | `js/player.js` | Remix index, settings, favourites and playlists, play queue, playback, TV knobs, export/import |
 | `js/ui.js` | Views, dialogs, drawing, mouse, touch and keyboard |
 | `js/main.js` | Start-up |
+| `js/goatcounter.js` | GoatCounter's counting script, unchanged (ISC licence, see below) |
 | `.github/workflows/pages.yml` | Publishes the site to GitHub Pages on every push to `main` |
 | `.github/workflows/actions.lock` | Pins every action the workflow uses, including transitive ones, to an exact commit |
 | `data/remixes.json` | A 44-remix sample of the index for local testing; the full list is built when publishing |
@@ -243,6 +245,10 @@ modify them, and get your own copy from style64.org instead of downloading it fr
 [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). It was changed to work as a favicon: a
 square `viewBox` so it scales, and white instead of navy in dark mode. The changed file is shared under
 the same licence. The Commodore logo is a trademark of its owner.
+
+`js/goatcounter.js` is GoatCounter's [`count.js`](https://www.goatcounter.com/help/countjs-host),
+released under the [ISC licence](https://opensource.org/licenses/ISC) as its first lines state. It is
+included unchanged; to update it, replace it with the current `https://gc.zgo.at/count.js`.
 
 ## Credits
 

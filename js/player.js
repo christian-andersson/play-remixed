@@ -96,8 +96,9 @@ function countPlay(r) {
   fetch(RKO + "/download.php/" + r.i + "/" + encodeURIComponent(r.f),
         { mode: "no-cors", redirect: "manual", cache: "no-store" }).catch(() => {});
   // Also count it as one GoatCounter event, if its script loaded. Every tune counts under the same name,
-  // so the statistics show the total number of plays, not which tunes were played.
-  window.goatcounter?.count?.({ path: "play", title: "Tune played", event: true });
+  // so the statistics show the total number of plays, not which tunes were played. no_session counts
+  // every play; without it GoatCounter counts a visitor's repeated plays only once.
+  window.goatcounter?.count?.({ path: "play", title: "Tune played", event: true, no_session: true });
 }
 
 // Sorting for Browse and Favourites (Recent keeps play order, playlists keep their own order).
