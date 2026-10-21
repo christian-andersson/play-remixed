@@ -1,0 +1,41 @@
+# Checks once a week whether GoatCounter has changed count.js, and fails if it has.
+#
+# js/goatcounter.js is a copy of https://gc.zgo.at/count.js. GoatCounter keeps working with the copy, but
+# a failed run is the reminder to look at the changes and, if they are wanted, replace the copy with the
+# new version. The differences are shown in the run's summary. GitHub emails a failed run to whoever last
+# changed the schedule.
+#
+# The job uses no actions, only curl and diff, and needs no access to the repository: it fetches the
+# copy from the public repository at the commit being run.
+name: Check GoatCounter script
+
+on:
+  schedule:
+    - cron: "41 6 * * 1"        # Mondays at 06:41 UTC
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Compare js/goatcounter.js with gc.zgo.at/count.js
+        env:
+          OURS: https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/js/goatcounter.js
+        run: |
+          curl -fsS --retry 3 -o ours.js "$OURS"
+          curl -fsS --retry 3 -o upstream.js https://gc.zgo.at/count.js
+          if cmp -s ours.js upstream.js; then
+            echo "js/goatcounter.js matches gc.zgo.at/count.js." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          {
+            echo "## gc.zgo.at/count.js has changed"
+            echo "Review the changes below. To take them, replace \`js/goatcounter.js\` with the new \`count.js\`."
+            echo '```diff'
+            diff -u --label js/goatcounter.js --label gc.zgo.at/count.js ours.js upstream.js || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::error::gc.zgo.at/count.js differs from js/goatcounter.js; see the run summary."
+          exit 1

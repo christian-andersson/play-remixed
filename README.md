@@ -221,6 +221,7 @@ gh actions-lock --verify                      # check it, as the workflow does
 | `js/main.js` | Start-up |
 | `js/goatcounter.js` | GoatCounter's counting script, unchanged (ISC licence, see below) |
 | `.github/workflows/pages.yml` | Publishes the site to GitHub Pages on every push to `main` |
+| `.github/workflows/goatcounter.yml` | Fails once a week if GoatCounter has changed `count.js`, so the copy can be updated |
 | `.github/workflows/actions.lock` | Pins every action the workflow uses, including transitive ones, to an exact commit |
 | `data/remixes.json` | A 44-remix sample of the index for local testing; the full list is built when publishing |
 | `build.py` | Reads the remix export and writes the index |
@@ -248,7 +249,8 @@ the same licence. The Commodore logo is a trademark of its owner.
 
 `js/goatcounter.js` is GoatCounter's [`count.js`](https://www.goatcounter.com/help/countjs-host),
 released under the [ISC licence](https://opensource.org/licenses/ISC) as its first lines state. It is
-included unchanged; to update it, replace it with the current `https://gc.zgo.at/count.js`.
+included unchanged; to update it, replace it with the current `https://gc.zgo.at/count.js`. A weekly
+workflow fails when the two differ, and shows the changes in its summary.
 
 ## Credits
 
