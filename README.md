@@ -97,8 +97,8 @@ When the page runs, the browser's built-in audio player streams each MP3 straigh
 early so tunes change quickly.
 
 The site's `download.php/<id>` link redirects to the same file and also adds one to the download count.
-When a tune starts playing, the page sends one request to that link without following the redirect.
-This counts the play once without downloading the MP3 a second time.
+When a tune starts playing, the page sends one `HEAD` request to that link. It follows the redirect
+but receives only the headers, so the play is counted once without downloading the MP3 a second time.
 
 ### Statistics
 

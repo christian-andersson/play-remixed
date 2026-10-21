@@ -90,11 +90,12 @@ let order = [], pos = -1, current = null, uncounted = null, failures = 0, recent
 
 const fileUrl = r => RKO + "/files/RKOfiles/" + encodeURIComponent(r.f);
 
-// Credit the play on RKO's download counter: hit download.php once, without following its
-// redirect, so the MP3 itself is not transferred a second time.
+// Credit the play on RKO's download counter: request download.php once. HEAD follows its redirect
+// to the MP3 without transferring the file a second time. (A no-cors request cannot use
+// redirect: "manual"; browsers reject it without sending anything.)
 function countPlay(r) {
   fetch(RKO + "/download.php/" + r.i + "/" + encodeURIComponent(r.f),
-        { mode: "no-cors", redirect: "manual", cache: "no-store" }).catch(() => {});
+        { method: "HEAD", mode: "no-cors", cache: "no-store" }).catch(() => {});
   // Also count it as one GoatCounter event, if its script loaded. Every tune counts under the same name,
   // so the statistics show the total number of plays, not which tunes were played. no_session counts
   // every play; without it GoatCounter counts a visitor's repeated plays only once.
