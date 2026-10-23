@@ -45,28 +45,32 @@
   <rect x="118" y="92" width="1012" height="804" rx="34" fill="none" stroke="#000" stroke-opacity=".35" stroke-width="3"/>
   <path d="M186 158.5 Q626 86.5 1066 158.5 Q1118 494.5 1066 830.5 Q626 902.5 186 830.5 Q134 494.5 186 158.5Z" fill="#111" stroke="#0b0b0b" stroke-width="10"/>
   <!-- speaker -->
-  <rect x="1163" y="80" width="235" height="340" fill="#3d3a39" stroke="#1d1b1a" stroke-width="4"/>
-  <rect x="1177" y="95" width="207" height="310" fill="url(#tv-grille)" stroke="#121110" stroke-width="3"/>
+  <rect x="1163" y="80" width="235" height="200" fill="#3d3a39" stroke="#1d1b1a" stroke-width="4"/>
+  <rect x="1177" y="95" width="207" height="170" fill="url(#tv-grille)" stroke="#121110" stroke-width="3"/>
   <g fill="#141211" stroke="#7a7675" stroke-width="2">
-    <rect x="1190" y="115" width="18" height="272"/><rect x="1220" y="115" width="18" height="272"/>
-    <rect x="1250" y="115" width="18" height="272"/><rect x="1280" y="115" width="18" height="272"/>
-    <rect x="1310" y="115" width="18" height="272"/><rect x="1340" y="115" width="18" height="272"/>
+    <rect x="1190" y="113" width="18" height="134"/><rect x="1220" y="113" width="18" height="134"/>
+    <rect x="1250" y="113" width="18" height="134"/><rect x="1280" y="113" width="18" height="134"/>
+    <rect x="1310" y="113" width="18" height="134"/><rect x="1340" y="113" width="18" height="134"/>
   </g>
-  <!-- knobs: the upper one switches colour scheme (channel), the middle one the picture size, the lower one is the power switch -->
-  <g id="knob-channel" class="knob" transform="translate(1280 515) scale(.78)">
+  <!-- knobs: the upper one switches colour scheme (channel), the middle one the picture size, the lower one is the power switch.
+       The dot on each handle points at the mark for the current position; the handles turn clockwise, so level points left. -->
+  <g id="knob-channel" class="knob" transform="translate(1280 420) scale(.78)">
     <title>Channel: click or scroll to change the colour scheme</title>
     <circle r="90" fill="#6b6766"/><circle r="84" fill="url(#tv-knob)" stroke="#0e0d0c" stroke-width="3"/>
-    <g class="knob-handle"><rect x="-95" y="-19" width="190" height="38" rx="19" fill="url(#tv-handle)" stroke="#0e0d0c" stroke-width="3"/></g>
+    <g class="knob-marks"><text x="-125" y="0">1</text><text x="-88" y="-88">2</text><text x="0" y="-125">3</text><text x="88" y="-88">4</text></g>
+    <g class="knob-handle"><rect x="-95" y="-19" width="190" height="38" rx="19" fill="url(#tv-handle)" stroke="#0e0d0c" stroke-width="3"/><circle cx="-72" r="8" fill="#e8e4e0"/></g>
   </g>
-  <g id="knob-size" class="knob" transform="translate(1280 680) scale(.78)">
+  <g id="knob-size" class="knob" transform="translate(1280 620) scale(.78)">
     <title>Size: click for fullscreen with the TV, fullscreen with only the C64, or the window (Z)</title>
     <circle r="90" fill="#6b6766"/><circle r="84" fill="url(#tv-knob)" stroke="#0e0d0c" stroke-width="3"/>
-    <g class="knob-handle"><rect x="-95" y="-19" width="190" height="38" rx="19" fill="url(#tv-handle)" stroke="#0e0d0c" stroke-width="3"/></g>
+    <g class="knob-marks"><rect x="-143" y="-12" width="36" height="24"/><path d="M-106 -93V-102H-97M-79 -102H-70V-93M-70 -83V-74H-79M-97 -74H-106V-83"/><rect x="-97" y="-94" width="18" height="12" stroke-width="3"/><path d="M-18 -130V-139H-9M9 -139H18V-130M18 -120V-111H9M-9 -111H-18V-120"/><rect class="fill" x="-9" y="-131" width="18" height="12"/></g>
+    <g class="knob-handle"><rect x="-95" y="-19" width="190" height="38" rx="19" fill="url(#tv-handle)" stroke="#0e0d0c" stroke-width="3"/><circle cx="-72" r="8" fill="#e8e4e0"/></g>
   </g>
-  <g id="knob-power" class="knob" transform="translate(1280 845) scale(.78)">
+  <g id="knob-power" class="knob" transform="translate(1280 820) scale(.78)">
     <title>Power: click to switch the TV on or off</title>
     <circle r="90" fill="#6b6766"/><circle r="84" fill="url(#tv-knob)" stroke="#0e0d0c" stroke-width="3"/>
-    <g class="knob-handle"><rect x="-95" y="-19" width="190" height="38" rx="19" fill="url(#tv-handle)" stroke="#0e0d0c" stroke-width="3"/></g>
+    <g class="knob-marks"><circle cx="-125" r="12"/><path d="M0 -137V-113"/></g>
+    <g class="knob-handle"><rect x="-95" y="-19" width="190" height="38" rx="19" fill="url(#tv-handle)" stroke="#0e0d0c" stroke-width="3"/><circle cx="-72" r="8" fill="#e8e4e0"/></g>
   </g>
 </svg>
 <div id="tube">

@@ -58,6 +58,10 @@ body.tv #tv, body.tv #tv-glass { display: block; }
 #knob-channel .knob-handle, #knob-size .knob-handle, #knob-power .knob-handle { transition: transform .25s ease-out; }
 #knob-power .knob-handle { transform: rotate(90deg); }               /* vertical: on */
 body.tv-off #knob-power .knob-handle { transform: rotate(0deg); }    /* horizontal: off */
+/* marks printed on the panel around each knob, one per position */
+.knob-marks { fill: none; stroke: #d6d1cd; stroke-width: 5; stroke-linecap: round; opacity: .85; }
+.knob-marks text { fill: #d6d1cd; stroke: none; font: 700 30px Helvetica, Arial, sans-serif; text-anchor: middle; dominant-baseline: central; }
+.knob-marks .fill { fill: #d6d1cd; stroke: none; }
 #wrap { position: relative; }
 /* 320x200 real pixels, enlarged without smoothing so every C64 pixel becomes a sharp block */
 #screen { display: block; background: var(--c6); image-rendering: pixelated; image-rendering: crisp-edges; cursor: default;
