@@ -54,8 +54,8 @@ body.tv-off #picture { transform: scale(0, 0); animation: crt-off .5s ease-in; }
 body.tv #tv, body.tv #tv-glass { display: block; }
 #tv { z-index: 0; filter: drop-shadow(0 24px 40px rgba(0, 0, 0, .55)); }
 #tv-glass { z-index: 2; pointer-events: none; }
-#knob-channel, #knob-power { cursor: pointer; }
-#knob-channel .knob-handle, #knob-power .knob-handle { transition: transform .25s ease-out; }
+#knob-channel, #knob-size, #knob-power { cursor: pointer; }
+#knob-channel .knob-handle, #knob-size .knob-handle, #knob-power .knob-handle { transition: transform .25s ease-out; }
 #knob-power .knob-handle { transform: rotate(90deg); }               /* vertical: on */
 body.tv-off #knob-power .knob-handle { transform: rotate(0deg); }    /* horizontal: off */
 #wrap { position: relative; }

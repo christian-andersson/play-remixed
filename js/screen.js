@@ -137,7 +137,7 @@ function fit() {
   // the largest whole-pixel screen that fits the glass of the largest TV the window allows
   const maxS = Math.min(innerWidth * 0.94 / TV.w, innerHeight * 0.92 / TV.h);
   const tvPx = snapPx(Math.min(g.w * maxS / (W + 2 * bw), g.h * maxS / (H + 2 * bh)));
-  const tv = tvPx >= TV_MIN_PX;
+  const tv = tvPx >= TV_MIN_PX && !document.body.classList.contains("c64-only");
   document.body.classList.toggle("tv", tv);
   if (!tv) setPower(true);                 // the power knob is part of the TV, so without it the screen stays on
   if (tv) {

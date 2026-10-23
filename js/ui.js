@@ -391,6 +391,7 @@ function drawOverlay(o) {
       ["F", "FAVOURITE SELECTED TUNE"],
       ["L", "ADD SELECTED TO A LIST"],
       ["S / R", "SHUFFLE / REPEAT"],
+      ["Z", "FULLSCREEN: TV / C64 / OFF"],
       ["+ / -", "VOLUME"],
       ["1-4 TAB", "SWITCH TABS"],
       ["N", "NEW LIST (IN LISTS TAB)"],
@@ -399,7 +400,7 @@ function drawOverlay(o) {
       ["ESC", "BACK / CLOSE"],
     ];
     lines.forEach(([k, v], i) => { text(x + 2, y + 2 + i, k, WHITE); text(x + 11, y + 2 + i, v, LBLUE); });
-    let by = y + 2 + lines.length + 1, bx = x + 2;
+    let by = y + 2 + lines.length, bx = x + 2;
     bx = btn(bx, by, "REMIX.KWED.ORG", () => window.open(RKO, "_blank", "noopener"), { col: CYAN });
     btn(bx, by, "FONT: STYLE64.ORG", () => window.open("https://style64.org/c64-truetype", "_blank", "noopener"), { col: CYAN });
     text(x + 2, by + 2, "INDEX BUILT " + BUILT, DGREY);
@@ -541,6 +542,7 @@ document.addEventListener("keydown", e => {
     case "l": if (isTrackView()) { handled(); openAddMenu(item); } return;
     case "s": handled(); return toggleShuffle();
     case "r": handled(); return cycleRepeat();
+    case "z": handled(); return nextSize();
     case "n": if (settings.view === "playlists") { handled(); newListPrompt(); } return;
   }
 });

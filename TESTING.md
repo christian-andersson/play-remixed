@@ -76,6 +76,8 @@ Use **LISTS → EXPORT** first if you want to keep anything.
 - [ ] Lists: create, rename, reorder (Shift+↑↓), delete.
 - [ ] Export, then import the file on a clean browser.
 - [ ] The TV shows on a large window and disappears on a small one; text stays sharp.
+- [ ] The middle knob (or `Z`): fullscreen with the TV, then only the C64 screen, then back to the
+      window. Esc in fullscreen goes back to the window, and the knob turns back too.
 - [ ] On a phone: tapping works, and the keyboard opens for search.
 
 ## Troubleshooting

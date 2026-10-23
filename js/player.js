@@ -281,6 +281,30 @@ function setPower(on) {
 $("picture").addEventListener("animationend", e => { if (e.animationName === "crt-on") $("picture").classList.remove("crt-on"); });
 $("knob-power").addEventListener("click", () => setPower(!tvOn));
 
+// The middle knob sets the picture size: the window, fullscreen with the TV, or fullscreen with only the
+// C64 screen, as large as it fits. The handle turns 45 degrees per position. Leaving fullscreen with Esc
+// turns it back to the window. Where pages cannot go fullscreen (the iPhone), it switches between the
+// window and the C64 alone.
+const SIZES = ["window", "tv", "c64"];
+let size = "window";
+const canFullscreen = () => !!(document.fullscreenEnabled && document.documentElement.requestFullscreen);
+function setSize(s) {
+  size = s;
+  const full = s !== "window" && canFullscreen();
+  if (full && !document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => setSize("window"));
+  if (!full && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  document.body.classList.toggle("c64-only", s === "c64");
+  document.querySelector("#knob-size .knob-handle").style.transform = "rotate(" + SIZES.indexOf(s) * 45 + "deg)";
+  fit();
+}
+function nextSize() {
+  let n = (SIZES.indexOf(size) + 1) % SIZES.length;
+  if (SIZES[n] === "tv" && !canFullscreen()) n++;
+  setSize(SIZES[n]);
+}
+$("knob-size").addEventListener("click", nextSize);
+document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && size !== "window") setSize("window"); });
+
 // Wheel distance in pixels, whatever unit the device reports (pixels, lines or pages).
 const wheelPixels = e => e.deltaY * (e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 400 : 1);
 

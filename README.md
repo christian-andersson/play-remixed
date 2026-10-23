@@ -14,6 +14,9 @@ like a radio, with playlists, favourites, shuffle and repeat. There is no server
   Frames and buttons are made from characters, not HTML elements.
 - **TV channels:** the TV's upper knob switches between four colour schemes: Colodore, Pepto, a green
   phosphor monitor and a black-and-white TV.
+- **Fullscreen:** the TV's middle knob, or `Z`, switches between the window, fullscreen with the TV, and
+  fullscreen with only the C64 screen. Esc leaves fullscreen. On an iPhone, where pages cannot go
+  fullscreen, it switches between the TV and the C64 screen alone.
 - **TV power:** the lower knob switches the TV off and on, with a CRT-style switch-off. The sound is muted
   while it is off, but the music keeps playing, so switching on again resumes mid-tune.
 - **Browse and search** by title, remixer or composer, for example `Hubbard`, `Galway` or `Commando`.
@@ -40,8 +43,8 @@ browsers block it from loading `data/remixes.json`. For local testing, run `./se
 
 **Mouse:** click buttons and ♥. Double-click a tune to play it. Scroll the list with the wheel or
 trackpad, or drag the scrollbar on the right; clicking the scrollbar's track jumps there. Click or scroll
-on the TV's upper knob to change channel (colour scheme), and click the lower knob to switch the TV
-off or on.
+on the TV's upper knob to change channel (colour scheme), click the middle knob for fullscreen, and
+click the lower knob to switch the TV off or on.
 
 | Key | Action |
 |---|---|
@@ -53,6 +56,7 @@ off or on.
 | `F` | Favourite the selected tune |
 | `L` | Add the selected tune to a list |
 | `S` / `R` | Shuffle / repeat |
+| `Z` | Fullscreen with the TV, fullscreen with only the C64 screen, back to the window |
 | `+` / `-` | Volume |
 | `1`–`4`, Tab | Switch tabs |
 | `N` | New list (in the Lists tab) |
